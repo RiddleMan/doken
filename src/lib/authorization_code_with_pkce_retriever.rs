@@ -10,7 +10,10 @@ struct CallbackQuery {
     code: String,
 }
 
-pub struct AuthorizationCodeWithPKCERetriever;
+pub struct AuthorizationCodeWithPKCERetriever<'a> {
+    code_verifier: Vec<u8>,
+    args: &'a Arguments,
+}
 
 #[get("/")]
 async fn root(auth_params: web::Query<CallbackQuery>) -> impl Responder {
@@ -19,30 +22,40 @@ async fn root(auth_params: web::Query<CallbackQuery>) -> impl Responder {
         .body(format!("<!doctype html><html lang=\"en\"><head><meta charset=utf-8><title>Doken</title></head><body>Successfully signed in. Close current tab. {}</body></html>", auth_params.code))
 }
 
-impl AuthorizationCodeWithPKCERetriever {
-    fn get_port(args: &Arguments) -> u16 {
-        match args.flow {
+impl<'a> AuthorizationCodeWithPKCERetriever<'a> {
+    pub fn new(args: &Arguments) -> AuthorizationCodeWithPKCERetriever {
+        AuthorizationCodeWithPKCERetriever {
+            code_verifier: pkce::code_verifier(128),
+            args,
+        }
+    }
+
+    fn get_port(&self) -> u16 {
+        match self.args.flow {
             Flow::AuthorizationCodeWithPKCE { port } => port,
             _ => unreachable!(),
         }
     }
 
-    fn open_token_url(args: &Arguments) -> io::Result<()> {
-        let port = Self::get_port(args);
-        let mut url = Url::parse(&args.authorization_url).unwrap();
-        let verifier = pkce::code_verifier(128);
+    // async fn exchange_code(&self) -> io::Result<String> {
+    //     // reqwest::get(self.args.token_url)
+    // }
+
+    fn open_token_url(&self) -> io::Result<()> {
+        let port = self.get_port();
+        let mut url = Url::parse(&self.args.authorization_url).unwrap();
 
         {
             let mut qs = url.query_pairs_mut();
 
             qs.append_pair("response_type", "code")
-                .append_pair("code_challenge", &pkce::code_challenge(&verifier))
+                .append_pair("code_challenge", &pkce::code_challenge(&self.code_verifier))
                 .append_pair("code_challenge_method", "S256")
-                .append_pair("client_id", &args.client_id)
-                .append_pair("scope", &args.scope)
+                .append_pair("client_id", &self.args.client_id)
+                .append_pair("scope", &self.args.scope)
                 .append_pair("redirect_uri", &format!("http://localhost:{}", port));
 
-            match &args.audience {
+            match &self.args.audience {
                 Some(audience) => {
                     qs.append_pair("audience", audience);
                 }
@@ -59,15 +72,15 @@ impl AuthorizationCodeWithPKCERetriever {
         Ok(())
     }
 
-    pub async fn retrieve(args: &Arguments) -> io::Result<()> {
-        let port = Self::get_port(args);
+    pub async fn retrieve(&self) -> io::Result<()> {
+        let port = self.get_port();
 
         let server = HttpServer::new(|| App::new().service(root))
             .bind(("127.0.0.1", port))?
             .run();
 
         // let server_handle = server.handle();
-        Self::open_token_url(args)?;
+        self.open_token_url()?;
 
         server.await
     }
