@@ -7,8 +7,6 @@ mod lib;
 async fn main() -> std::io::Result<()> {
     let args = lib::args::Args::parse();
 
-    println!("{:#?}", args);
-
     match args.flow {
         Flow::AuthorizationCodeWithPKCE { port: _port } => {
             AuthorizationCodeWithPKCERetriever::retrieve(&args).await

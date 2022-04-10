@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 reqwest = { version = "0.11", features = ["json"] }
-serde = { version = "1.0.136" }
+serde = { version = "1.0.136", features = ["derive"] }
 clap = { version = "3.1.8", features = ["derive"] }
 tokio = { version = "1.17.0", features = ["full"] }
 actix-web = "4"

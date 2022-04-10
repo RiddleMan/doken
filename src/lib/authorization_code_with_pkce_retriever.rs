@@ -1,17 +1,22 @@
 use crate::lib::args::{Arguments, Flow};
-use actix_web::{get, http::header, App, HttpResponse, HttpServer, Responder};
-use clap::Arg;
+use actix_web::{get, http::header, web, App, HttpResponse, HttpServer, Responder};
 use reqwest::Url;
+use serde::Deserialize;
 use std::io;
 use std::process::Command;
+
+#[derive(Deserialize)]
+struct CallbackQuery {
+    code: String,
+}
 
 pub struct AuthorizationCodeWithPKCERetriever;
 
 #[get("/")]
-async fn root() -> impl Responder {
+async fn root(auth_params: web::Query<CallbackQuery>) -> impl Responder {
     HttpResponse::Ok()
         .content_type(header::ContentType(mime::TEXT_HTML))
-        .body("<!doctype html><html lang=\"en\"><head><meta charset=utf-8><title>Doken</title></head><body>Successfully signed in. Close current tab.</body></html>")
+        .body(format!("<!doctype html><html lang=\"en\"><head><meta charset=utf-8><title>Doken</title></head><body>Successfully signed in. Close current tab. {}</body></html>", auth_params.code))
 }
 
 impl AuthorizationCodeWithPKCERetriever {
