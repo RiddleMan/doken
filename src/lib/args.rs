@@ -27,7 +27,10 @@ pub struct Arguments {
     pub flow: Flow,
 
     #[clap(long)]
-    pub issuer_url: String,
+    pub token_url: String,
+
+    #[clap(long)]
+    pub authorization_url: String,
 
     #[clap(long)]
     pub client_id: String,

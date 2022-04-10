@@ -22,9 +22,9 @@ impl AuthorizationCodeWithPKCERetriever {
         }
     }
 
-    fn open_token_url(args: &Arguments) {
+    fn open_token_url(args: &Arguments) -> io::Result<()> {
         let port = Self::get_port(args);
-        let mut url = Url::parse(&args.issuer_url).unwrap();
+        let mut url = Url::parse(&args.authorization_url).unwrap();
         let verifier = pkce::code_verifier(128);
 
         {
@@ -45,10 +45,15 @@ impl AuthorizationCodeWithPKCERetriever {
             };
         }
 
-        // Command::new("open")
-        //     .arg("")
-        println!("{}", url.as_str());
+        let status = Command::new("open").arg(url.as_str()).status()?;
+
+        if !status.success() {
+            panic!("Url couldn't be opened.")
+        }
+
+        Ok(())
     }
+
     pub async fn retrieve(args: &Arguments) -> io::Result<()> {
         let port = Self::get_port(args);
 
@@ -57,7 +62,7 @@ impl AuthorizationCodeWithPKCERetriever {
             .run();
 
         // let server_handle = server.handle();
-        Self::open_token_url(args);
+        Self::open_token_url(args)?;
 
         server.await
     }
