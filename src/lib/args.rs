@@ -2,8 +2,14 @@ use clap::{ArgEnum, Parser, Subcommand};
 
 #[derive(Subcommand, Debug)]
 pub enum Flow {
-    AuthorizationCodeWithPKCE,
-    AuthorizationCode,
+    AuthorizationCodeWithPKCE {
+        #[clap(long, default_value_t = 8081)]
+        port: u16,
+    },
+    AuthorizationCode {
+        #[clap(long, default_value_t = 8081)]
+        port: u16,
+    },
     Implicit,
     ClientCredentials,
 }
