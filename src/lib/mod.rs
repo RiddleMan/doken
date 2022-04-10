@@ -1,3 +1,1 @@
-pub fn lib_function() -> () {
-    println!("test");
-}
+pub mod args;

@@ -1,5 +1,7 @@
 mod lib;
 
 fn main() {
-    println!("Hello, world!");
+    let args = lib::args::Args::parse();
+
+    println!("{:#?}", args);
 }
