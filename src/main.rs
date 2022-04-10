@@ -11,7 +11,7 @@ async fn main() -> std::io::Result<()> {
 
     match args.flow {
         Flow::AuthorizationCodeWithPKCE { port: _port } => {
-            AuthorizationCodeWithPKCERetriever::retrieve(args).await
+            AuthorizationCodeWithPKCERetriever::retrieve(&args).await
         }
         _ => panic!("Not implemented"),
     }

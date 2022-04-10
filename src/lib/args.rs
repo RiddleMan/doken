@@ -35,6 +35,9 @@ pub struct Arguments {
     #[clap(long, default_value = "offline_access")]
     pub scope: String,
 
+    #[clap(long)]
+    pub audience: Option<String>,
+
     #[clap(long, arg_enum, default_value_t = Token::AccessToken)]
     pub token: Token,
 }
