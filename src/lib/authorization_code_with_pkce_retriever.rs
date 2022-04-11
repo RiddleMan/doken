@@ -2,8 +2,8 @@ use crate::lib::args::{Arguments, Flow};
 use oauth2::basic::{BasicClient, BasicTokenResponse};
 use oauth2::reqwest::async_http_client;
 use oauth2::{
-    AuthUrl, AuthorizationCode, ClientId, CsrfToken, PkceCodeChallenge, PkceCodeVerifier,
-    RedirectUrl, Scope, TokenUrl,
+    AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, PkceCodeChallenge,
+    PkceCodeVerifier, RedirectUrl, Scope, TokenUrl,
 };
 use reqwest::Url;
 use std::io;
@@ -24,15 +24,14 @@ impl<'a> AuthorizationCodeWithPKCERetriever<'a> {
 
         let client = BasicClient::new(
             ClientId::new(args.client_id.to_string()),
-            None,
+            args.client_secret.clone().map(ClientSecret::new),
             AuthUrl::new(args.authorization_url.to_string())?,
             Some(TokenUrl::new(args.token_url.to_string())?),
-        );
-        let final_client = client
-            .set_redirect_uri(RedirectUrl::new(format!("http://localhost:{}", port)).unwrap());
+        )
+        .set_redirect_uri(RedirectUrl::new(format!("http://localhost:{}", port)).unwrap());
 
         Ok(AuthorizationCodeWithPKCERetriever {
-            oauth2_client: final_client,
+            oauth2_client: client,
             args,
         })
     }

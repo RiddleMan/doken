@@ -35,6 +35,9 @@ pub struct Arguments {
     #[clap(long)]
     pub client_id: String,
 
+    #[clap(long)]
+    pub client_secret: Option<String>,
+
     #[clap(long, default_value = "offline_access")]
     pub scope: String,
 
