@@ -1,4 +1,6 @@
 use crate::lib::args::{Arguments, Flow};
+use crate::lib::token_retriever::TokenRetriever;
+use async_trait::async_trait;
 use oauth2::basic::{BasicClient, BasicTokenResponse};
 use oauth2::reqwest::async_http_client;
 use oauth2::{
@@ -74,8 +76,11 @@ impl<'a> AuthorizationCodeWithPKCERetriever<'a> {
 
         Ok(())
     }
+}
 
-    pub async fn retrieve(&self) -> Result<BasicTokenResponse, Box<dyn std::error::Error>> {
+#[async_trait]
+impl<'a> TokenRetriever for AuthorizationCodeWithPKCERetriever<'a> {
+    async fn retrieve(&self) -> Result<BasicTokenResponse, Box<dyn std::error::Error>> {
         let port = Self::get_port(self.args);
 
         let server = Server::http(format!("127.0.0.1:{}", port)).unwrap();
