@@ -53,10 +53,10 @@ impl FileState {
         Ok(())
     }
 
-    pub async fn read_token_info(&self, client_id: String) -> Option<TokenInfo> {
+    pub async fn read_token_info(&self, client_id: &String) -> Option<TokenInfo> {
         let state = self.read().await;
 
-        state.data.get(&client_id).cloned()
+        state.data.get(client_id).cloned()
     }
 
     pub async fn upsert_token_info(
