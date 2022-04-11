@@ -1,5 +1,6 @@
 use crate::lib::args::{Arguments, Flow};
 use crate::lib::token_retriever::TokenRetriever;
+use crate::TokenInfo;
 use async_trait::async_trait;
 use oauth2::basic::{BasicClient, BasicTokenResponse};
 use oauth2::reqwest::async_http_client;
@@ -80,7 +81,7 @@ impl<'a> AuthorizationCodeWithPKCERetriever<'a> {
 
 #[async_trait]
 impl<'a> TokenRetriever for AuthorizationCodeWithPKCERetriever<'a> {
-    async fn retrieve(&self) -> Result<BasicTokenResponse, Box<dyn std::error::Error>> {
+    async fn retrieve(&self) -> Result<TokenInfo, Box<dyn std::error::Error>> {
         let port = Self::get_port(self.args);
 
         let server = Server::http(format!("127.0.0.1:{}", port)).unwrap();
@@ -105,7 +106,7 @@ impl<'a> TokenRetriever for AuthorizationCodeWithPKCERetriever<'a> {
 
                     let token = self.exchange_code(&code, pkce_verifier).await?;
 
-                    return Ok(token);
+                    return Ok(TokenInfo::from_token_response(&token));
                 }
                 None => {
                     println!("Ignoring");

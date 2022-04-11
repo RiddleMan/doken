@@ -1,39 +1,8 @@
-use oauth2::basic::BasicTokenResponse;
-use oauth2::TokenResponse;
+use crate::lib::token_info::TokenInfo;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::ops::Add;
 use std::path::{Path, PathBuf};
-use std::time::SystemTime;
 use tokio::fs;
-
-#[derive(Deserialize, Serialize, Clone)]
-pub struct TokenInfo {
-    access_token: String,
-
-    expires: Option<SystemTime>,
-
-    scope: Option<String>,
-
-    refresh_token: Option<String>,
-}
-
-impl TokenInfo {
-    pub fn from_token_response(response: &BasicTokenResponse) -> TokenInfo {
-        TokenInfo {
-            access_token: response.access_token().secret().to_owned(),
-            expires: response
-                .expires_in()
-                .map(|duration| SystemTime::now().add(duration)),
-            scope: response
-                .scopes()
-                .map(|v| v.iter().map(|scope| scope.to_string()).collect()),
-            refresh_token: response
-                .refresh_token()
-                .map(|token| token.secret().to_owned()),
-        }
-    }
-}
 
 type ClientId = String;
 
