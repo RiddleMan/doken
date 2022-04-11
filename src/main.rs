@@ -17,7 +17,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .await?;
 
             file_state
-                .save(args.client_id, TokenInfo::from_token_response(&token))
+                .upsert_token_info(args.client_id, TokenInfo::from_token_response(&token))
                 .await?;
 
             Ok(())

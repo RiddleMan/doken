@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 use tokio::fs;
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct TokenInfo {
     access_token: String,
 
@@ -64,26 +64,42 @@ impl FileState {
         }
     }
 
-    pub async fn save(
-        &self,
-        client_id: String,
-        token_info: TokenInfo,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    async fn read(&self) -> DokenState {
         let text = fs::read_to_string(&self.file_path)
             .await
             .unwrap_or_else(|_| "".to_string());
 
-        let mut state = serde_json::from_str::<DokenState>(&text).unwrap_or_else(|_| {
+        serde_json::from_str::<DokenState>(&text).unwrap_or_else(|_| {
             let data = HashMap::new();
 
             DokenState { version: 1, data }
-        });
+        })
+    }
+
+    async fn write(&self, state: &DokenState) -> Result<(), Box<dyn std::error::Error>> {
+        let state_str = serde_json::to_string(state).unwrap();
+
+        fs::write(&self.file_path, state_str).await?;
+
+        Ok(())
+    }
+
+    pub async fn read_token_info(&self, client_id: String) -> Option<TokenInfo> {
+        let state = self.read().await;
+
+        state.data.get(&client_id).cloned()
+    }
+
+    pub async fn upsert_token_info(
+        &self,
+        client_id: String,
+        token_info: TokenInfo,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let mut state = self.read().await;
 
         state.data.insert(client_id, token_info);
 
-        let state_str = serde_json::to_string(&state).unwrap();
-
-        fs::write(&self.file_path, state_str).await?;
+        self.write(&state).await?;
 
         Ok(())
     }
