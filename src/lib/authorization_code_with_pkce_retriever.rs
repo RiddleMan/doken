@@ -75,7 +75,7 @@ impl<'a> AuthorizationCodeWithPKCERetriever<'a> {
         Ok(())
     }
 
-    pub async fn retrieve(&self) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn retrieve(&self) -> Result<BasicTokenResponse, Box<dyn std::error::Error>> {
         let port = Self::get_port(self.args);
 
         let server = Server::http(format!("127.0.0.1:{}", port)).unwrap();
@@ -100,9 +100,7 @@ impl<'a> AuthorizationCodeWithPKCERetriever<'a> {
 
                     let token = self.exchange_code(&code, pkce_verifier).await?;
 
-                    println!("{:#?}", token);
-
-                    break;
+                    return Ok(token);
                 }
                 None => {
                     println!("Ignoring");
@@ -110,6 +108,6 @@ impl<'a> AuthorizationCodeWithPKCERetriever<'a> {
             }
         }
 
-        Ok(())
+        panic!("Cannot get token")
     }
 }
