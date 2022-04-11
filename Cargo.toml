@@ -8,9 +8,11 @@ edition = "2021"
 [dependencies]
 reqwest = { version = "0.11", features = ["json"] }
 serde = { version = "1.0.136", features = ["derive"] }
+serde_json = { version = "1.0.79" }
 clap = { version = "3.1.8", features = ["derive"] }
 tokio = { version = "1.17.0", features = ["full"] }
 tiny_http = "0.11"
+home = "0.5.3"
 url = "2.2.2"
 async-trait = "0.1.53"
 mime = "0.3.16"
