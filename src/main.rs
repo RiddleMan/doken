@@ -4,12 +4,12 @@ use crate::lib::authorization_code_with_pkce_retriever::AuthorizationCodeWithPKC
 mod lib;
 
 #[tokio::main]
-async fn main() -> std::io::Result<()> {
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = lib::args::Args::parse();
 
     match args.flow {
         Flow::AuthorizationCodeWithPKCE { port: _port } => {
-            AuthorizationCodeWithPKCERetriever::new(&args)
+            AuthorizationCodeWithPKCERetriever::new(&args)?
                 .retrieve()
                 .await
         }
