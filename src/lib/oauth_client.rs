@@ -48,6 +48,10 @@ impl<'a> OAuthClient<'a> {
             builder = builder.set_pkce_challenge(challenge);
         }
 
+        if let Some(aud) = &self.args.audience {
+            builder = builder.add_extra_param("audience", aud);
+        }
+
         builder.url()
     }
 

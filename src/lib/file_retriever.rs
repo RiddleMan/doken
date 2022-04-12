@@ -1,4 +1,5 @@
 use crate::lib::args::Arguments;
+use crate::lib::oauth_client::OAuthClient;
 use crate::{FileState, TokenInfo, TokenRetriever};
 use async_trait::async_trait;
 use std::error::Error;
@@ -16,12 +17,16 @@ impl Display for TokenInfoNotFoundError {
 impl Error for TokenInfoNotFoundError {}
 
 pub struct FileRetriever<'a> {
+    oauth_client: OAuthClient<'a>,
     args: &'a Arguments,
 }
 
 impl<'a> FileRetriever<'a> {
-    pub fn new(args: &Arguments) -> FileRetriever {
-        FileRetriever { args }
+    pub fn new(args: &Arguments) -> Result<FileRetriever, Box<dyn Error>> {
+        Ok(FileRetriever {
+            oauth_client: OAuthClient::new(args)?,
+            args,
+        })
     }
 }
 

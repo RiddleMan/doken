@@ -12,7 +12,7 @@ mod lib;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = lib::args::Args::parse();
     let file_state = FileState::new();
-    let file_retriever = FileRetriever::new(&args);
+    let file_retriever = FileRetriever::new(&args)?;
 
     let file_token_info = file_retriever.retrieve().await;
 

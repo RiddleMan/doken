@@ -11,7 +11,7 @@ use std::str::FromStr;
 use tiny_http::{Header, Response, Server};
 
 pub struct AuthorizationCodeWithPKCERetriever<'a> {
-    oauth2_client: OAuthClient<'a>,
+    oauth_client: OAuthClient<'a>,
     args: &'a Arguments,
 }
 
@@ -20,7 +20,7 @@ impl<'a> AuthorizationCodeWithPKCERetriever<'a> {
         args: &Arguments,
     ) -> Result<AuthorizationCodeWithPKCERetriever, Box<dyn std::error::Error>> {
         Ok(AuthorizationCodeWithPKCERetriever {
-            oauth2_client: OAuthClient::new(args)?,
+            oauth_client: OAuthClient::new(args)?,
             args,
         })
     }
@@ -33,7 +33,7 @@ impl<'a> AuthorizationCodeWithPKCERetriever<'a> {
     }
 
     fn open_token_url(&self, pkce_challenge: PkceCodeChallenge) -> io::Result<()> {
-        let (url, _) = self.oauth2_client.authorize_url(Some(pkce_challenge));
+        let (url, _) = self.oauth_client.authorize_url(Some(pkce_challenge));
 
         let status = Command::new("open").arg(url.as_str()).status()?;
 
@@ -71,7 +71,7 @@ impl<'a> TokenRetriever for AuthorizationCodeWithPKCERetriever<'a> {
                     request.respond(response)?;
 
                     let token = self
-                        .oauth2_client
+                        .oauth_client
                         .exchange_code(&code, Some(pkce_verifier))
                         .await?;
 
