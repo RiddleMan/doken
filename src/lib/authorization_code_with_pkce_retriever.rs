@@ -1,13 +1,9 @@
 use crate::lib::args::{Arguments, Flow};
+use crate::lib::oauth_client::OAuthClient;
 use crate::lib::token_retriever::TokenRetriever;
 use crate::TokenInfo;
 use async_trait::async_trait;
-use oauth2::basic::{BasicClient, BasicTokenResponse};
-use oauth2::reqwest::async_http_client;
-use oauth2::{
-    AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, PkceCodeChallenge,
-    PkceCodeVerifier, RedirectUrl, Scope, TokenUrl,
-};
+use oauth2::PkceCodeChallenge;
 use reqwest::Url;
 use std::io;
 use std::process::Command;
@@ -15,7 +11,7 @@ use std::str::FromStr;
 use tiny_http::{Header, Response, Server};
 
 pub struct AuthorizationCodeWithPKCERetriever<'a> {
-    oauth2_client: oauth2::basic::BasicClient,
+    oauth2_client: OAuthClient<'a>,
     args: &'a Arguments,
 }
 
@@ -23,18 +19,8 @@ impl<'a> AuthorizationCodeWithPKCERetriever<'a> {
     pub fn new(
         args: &Arguments,
     ) -> Result<AuthorizationCodeWithPKCERetriever, Box<dyn std::error::Error>> {
-        let port = Self::get_port(args);
-
-        let client = BasicClient::new(
-            ClientId::new(args.client_id.to_string()),
-            args.client_secret.clone().map(ClientSecret::new),
-            AuthUrl::new(args.authorization_url.to_string())?,
-            Some(TokenUrl::new(args.token_url.to_string())?),
-        )
-        .set_redirect_uri(RedirectUrl::new(format!("http://localhost:{}", port)).unwrap());
-
         Ok(AuthorizationCodeWithPKCERetriever {
-            oauth2_client: client,
+            oauth2_client: OAuthClient::new(args)?,
             args,
         })
     }
@@ -46,28 +32,8 @@ impl<'a> AuthorizationCodeWithPKCERetriever<'a> {
         }
     }
 
-    async fn exchange_code(
-        &self,
-        code: &str,
-        code_verifier: PkceCodeVerifier,
-    ) -> Result<BasicTokenResponse, Box<dyn std::error::Error>> {
-        let token = self
-            .oauth2_client
-            .exchange_code(AuthorizationCode::new(code.to_string()))
-            .set_pkce_verifier(code_verifier)
-            .request_async(async_http_client)
-            .await?;
-
-        Ok(token)
-    }
-
     fn open_token_url(&self, pkce_challenge: PkceCodeChallenge) -> io::Result<()> {
-        let (url, _) = self
-            .oauth2_client
-            .authorize_url(CsrfToken::new_random)
-            .add_scope(Scope::new(self.args.scope.to_string()))
-            .set_pkce_challenge(pkce_challenge)
-            .url();
+        let (url, _) = self.oauth2_client.authorize_url(Some(pkce_challenge));
 
         let status = Command::new("open").arg(url.as_str()).status()?;
 
@@ -104,7 +70,10 @@ impl<'a> TokenRetriever for AuthorizationCodeWithPKCERetriever<'a> {
 
                     request.respond(response)?;
 
-                    let token = self.exchange_code(&code, pkce_verifier).await?;
+                    let token = self
+                        .oauth2_client
+                        .exchange_code(&code, Some(pkce_verifier))
+                        .await?;
 
                     return Ok(TokenInfo::from_token_response(&token));
                 }
