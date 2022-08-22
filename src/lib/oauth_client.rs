@@ -4,8 +4,9 @@ use oauth2::basic::{BasicClient, BasicTokenResponse};
 use oauth2::reqwest::async_http_client;
 use oauth2::{
     AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, PkceCodeChallenge,
-    PkceCodeVerifier, RedirectUrl, Scope, TokenUrl,
+    PkceCodeVerifier, RedirectUrl, RefreshToken, Scope, TokenUrl,
 };
+use std::error::Error;
 use url::Url;
 
 pub struct OAuthClient<'a> {
@@ -21,7 +22,7 @@ impl<'a> OAuthClient<'a> {
         }
     }
 
-    pub fn new(args: &Arguments) -> Result<OAuthClient, Box<dyn std::error::Error>> {
+    pub fn new(args: &Arguments) -> Result<OAuthClient, Box<dyn Error>> {
         let port = Self::get_port(args);
 
         let client = BasicClient::new(
@@ -59,7 +60,7 @@ impl<'a> OAuthClient<'a> {
         &self,
         code: &str,
         code_verifier: Option<PkceCodeVerifier>,
-    ) -> Result<BasicTokenResponse, Box<dyn std::error::Error>> {
+    ) -> Result<BasicTokenResponse, Box<dyn Error>> {
         let mut builder = self
             .inner
             .exchange_code(AuthorizationCode::new(code.to_string()));
@@ -71,5 +72,18 @@ impl<'a> OAuthClient<'a> {
         let token = builder.request_async(async_http_client).await?;
 
         Ok(token)
+    }
+
+    pub async fn refresh_token(
+        &self,
+        refresh_token: String,
+    ) -> Result<BasicTokenResponse, Box<dyn Error>> {
+        let refresh_token = RefreshToken::new(refresh_token);
+
+        Ok(self
+            .inner
+            .exchange_refresh_token(&refresh_token)
+            .request_async(async_http_client)
+            .await?)
     }
 }

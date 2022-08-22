@@ -45,7 +45,7 @@ impl<'a> AuthorizationCodeWithPKCERetriever<'a> {
     }
 }
 
-#[async_trait]
+#[async_trait(?Send)]
 impl<'a> TokenRetriever for AuthorizationCodeWithPKCERetriever<'a> {
     async fn retrieve(&self) -> Result<TokenInfo, Box<dyn std::error::Error>> {
         let port = Self::get_port(self.args);
@@ -75,7 +75,7 @@ impl<'a> TokenRetriever for AuthorizationCodeWithPKCERetriever<'a> {
                         .exchange_code(&code, Some(pkce_verifier))
                         .await?;
 
-                    return Ok(TokenInfo::from_token_response(&token));
+                    return Ok(TokenInfo::from_token_response(token));
                 }
                 None => {
                     println!("Ignoring");

@@ -36,13 +36,10 @@ impl FileState {
     async fn read(&self) -> DokenState {
         let text = fs::read_to_string(&self.file_path)
             .await
-            .unwrap_or_else(|_| "".to_string());
+            .unwrap_or("".to_string());
 
-        serde_json::from_str::<DokenState>(&text).unwrap_or_else(|_| {
-            let data = HashMap::new();
-
-            DokenState { version: 1, data }
-        })
+        let data = HashMap::new();
+        serde_json::from_str::<DokenState>(&text).unwrap_or(DokenState { version: 1, data })
     }
 
     async fn write(&self, state: &DokenState) -> Result<(), Box<dyn std::error::Error>> {
@@ -67,6 +64,19 @@ impl FileState {
         let mut state = self.read().await;
 
         state.data.insert(client_id, token_info);
+
+        self.write(&state).await?;
+
+        Ok(())
+    }
+
+    pub async fn clear_token_info(
+        &self,
+        client_id: String,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let mut state = self.read().await;
+
+        state.data.remove(&client_id);
 
         self.write(&state).await?;
 

@@ -4,6 +4,7 @@ use crate::{FileState, TokenInfo, TokenRetriever};
 use async_trait::async_trait;
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
+use std::time::SystemTime;
 
 #[derive(Debug)]
 struct TokenInfoNotFoundError;
@@ -18,6 +19,7 @@ impl Error for TokenInfoNotFoundError {}
 
 pub struct FileRetriever<'a> {
     oauth_client: OAuthClient<'a>,
+    file_state: FileState,
     args: &'a Arguments,
 }
 
@@ -25,22 +27,65 @@ impl<'a> FileRetriever<'a> {
     pub fn new(args: &Arguments) -> Result<FileRetriever, Box<dyn Error>> {
         Ok(FileRetriever {
             oauth_client: OAuthClient::new(args)?,
+            file_state: FileState::new(),
             args,
         })
     }
+
+    async fn refresh_token(&self, refresh_token: &str) -> Result<TokenInfo, Box<dyn Error>> {
+        let result = self
+            .oauth_client
+            .refresh_token(refresh_token.to_owned())
+            .await;
+
+        match result {
+            Ok(token_response) => {
+                let token_info = TokenInfo::from_token_response(token_response);
+
+                self.file_state
+                    .upsert_token_info(self.args.client_id.to_owned(), token_info.to_owned())
+                    .await?;
+
+                Ok(token_info)
+            }
+            Err(_) => {
+                self.file_state
+                    .clear_token_info(self.args.client_id.to_owned())
+                    .await?;
+
+                Err(Box::new(TokenInfoNotFoundError {}))
+            }
+        }
+    }
 }
 
-#[async_trait]
+#[async_trait(?Send)]
 impl<'a> TokenRetriever for FileRetriever<'a> {
     async fn retrieve(&self) -> Result<TokenInfo, Box<dyn Error>> {
-        let file_state = FileState::new();
-
-        let token_info = file_state.read_token_info(&self.args.client_id).await;
+        let token_info = self.file_state.read_token_info(&self.args.client_id).await;
 
         if token_info.is_none() {
             return Err(Box::new(TokenInfoNotFoundError {}));
         }
 
-        Ok(token_info.unwrap())
+        let token_info = token_info.unwrap();
+
+        let expires = token_info.expires.unwrap_or_else(SystemTime::now);
+
+        let is_token_expired = expires < SystemTime::now();
+
+        if !is_token_expired {
+            Ok(token_info)
+        } else if is_token_expired && token_info.refresh_token.is_some() {
+            let refresh_token = token_info.refresh_token.unwrap();
+            let token_info = self.refresh_token(&refresh_token).await?;
+
+            Ok(token_info)
+        } else {
+            self.file_state
+                .clear_token_info(self.args.client_id.to_owned())
+                .await?;
+            Err(Box::new(TokenInfoNotFoundError {}))
+        }
     }
 }

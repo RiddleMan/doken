@@ -16,7 +16,7 @@ pub struct TokenInfo {
 }
 
 impl TokenInfo {
-    pub fn from_token_response(response: &BasicTokenResponse) -> TokenInfo {
+    pub fn from_token_response(response: BasicTokenResponse) -> TokenInfo {
         TokenInfo {
             access_token: response.access_token().secret().to_owned(),
             expires: response
