@@ -1,13 +1,11 @@
 use crate::lib::args::{Arguments, Flow};
 use crate::lib::oauth_client::OAuthClient;
+use crate::lib::server::get_code;
 use crate::lib::token_retriever::TokenRetriever;
 use crate::TokenInfo;
 use async_trait::async_trait;
-use reqwest::Url;
 use std::io;
 use std::process::Command;
-use std::str::FromStr;
-use tiny_http::{Header, Response, Server};
 
 pub struct AuthorizationCodeRetriever<'a> {
     oauth_client: OAuthClient<'a>,
@@ -15,9 +13,7 @@ pub struct AuthorizationCodeRetriever<'a> {
 }
 
 impl<'a> AuthorizationCodeRetriever<'a> {
-    pub fn new(
-        args: &Arguments,
-    ) -> Result<AuthorizationCodeRetriever, Box<dyn std::error::Error>> {
+    pub fn new(args: &Arguments) -> Result<AuthorizationCodeRetriever, Box<dyn std::error::Error>> {
         Ok(AuthorizationCodeRetriever {
             oauth_client: OAuthClient::new(args)?,
             args,
@@ -49,38 +45,12 @@ impl<'a> TokenRetriever for AuthorizationCodeRetriever<'a> {
     async fn retrieve(&self) -> Result<TokenInfo, Box<dyn std::error::Error>> {
         let port = Self::get_port(self.args);
 
-        let server = Server::http(format!("127.0.0.1:{}", port)).unwrap();
-
         self.open_token_url()?;
 
-        for request in server.incoming_requests() {
-            let url = Url::parse(format!("http://localhost{}", request.url()).as_str()).unwrap();
-            let code = url.query_pairs().find(|qp| qp.0.eq("code"));
+        let code = get_code(port).await?;
 
-            match code {
-                Some(x) => {
-                    let code = x.1.to_string();
+        let token = self.oauth_client.exchange_code(&code, None).await?;
 
-                    let html_header =
-                        Header::from_str("Content-Type: text/html; charset=UTF-8").unwrap();
-                    let mut response = Response::from_string("<!doctype html><html lang=\"en\"><script>window.close();</script><head><meta charset=utf-8><title>Doken</title></head><body>Successfully signed in. Close current tab.</body></html>");
-                    response.add_header(html_header);
-
-                    request.respond(response)?;
-
-                    let token = self
-                        .oauth_client
-                        .exchange_code(&code, None)
-                        .await?;
-
-                    return Ok(TokenInfo::from_token_response(token));
-                }
-                None => {
-                    println!("Ignoring");
-                }
-            }
-        }
-
-        panic!("Cannot get token")
+        return Ok(TokenInfo::from_token_response(token));
     }
 }
