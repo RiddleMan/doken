@@ -5,6 +5,7 @@ use crate::lib::file_state::FileState;
 use crate::lib::token_retriever::TokenRetriever;
 use lib::token_info::TokenInfo;
 use std::process::exit;
+use crate::lib::authorization_code_retriever::AuthorizationCodeRetriever;
 
 mod lib;
 
@@ -24,6 +25,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     match args.flow {
         Flow::AuthorizationCodeWithPKCE { port: _port } => {
             let token = AuthorizationCodeWithPKCERetriever::new(&args)?
+                .retrieve()
+                .await?;
+
+            file_state
+                .upsert_token_info(args.client_id, token.clone())
+                .await?;
+
+            println!("{}", token.access_token);
+            exit(0);
+        }
+        Flow::AuthorizationCode { port: _port } => {
+            let token = AuthorizationCodeRetriever::new(&args)?
                 .retrieve()
                 .await?;
 

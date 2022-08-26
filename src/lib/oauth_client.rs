@@ -18,6 +18,7 @@ impl<'a> OAuthClient<'a> {
     fn get_port(args: &Arguments) -> u16 {
         match args.flow {
             Flow::AuthorizationCodeWithPKCE { port } => port,
+            Flow::AuthorizationCode { port } => port,
             _ => unreachable!(),
         }
     }
