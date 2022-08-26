@@ -75,17 +75,22 @@ impl<'a> TokenRetriever for FileRetriever<'a> {
         let is_token_expired = expires < SystemTime::now();
 
         if !is_token_expired {
-            Ok(token_info)
-        } else if is_token_expired && token_info.refresh_token.is_some() {
-            let refresh_token = token_info.refresh_token.unwrap();
-            let token_info = self.refresh_token(&refresh_token).await?;
+            return Ok(token_info);
+        }
 
-            Ok(token_info)
-        } else {
-            self.file_state
-                .clear_token_info(self.args.client_id.to_owned())
-                .await?;
-            Err(Box::new(TokenInfoNotFoundError {}))
+        match token_info.refresh_token {
+            Some(token) => {
+                let token_info = self.refresh_token(&token).await?;
+
+                Ok(token_info)
+            }
+            None => {
+                self.file_state
+                    .clear_token_info(self.args.client_id.to_owned())
+                    .await?;
+
+                Err(Box::new(TokenInfoNotFoundError {}))
+            }
         }
     }
 }
