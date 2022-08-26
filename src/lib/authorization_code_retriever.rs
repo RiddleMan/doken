@@ -63,7 +63,7 @@ impl<'a> TokenRetriever for AuthorizationCodeRetriever<'a> {
 
                     let html_header =
                         Header::from_str("Content-Type: text/html; charset=UTF-8").unwrap();
-                    let mut response = Response::from_string("<!doctype html><html lang=\"en\"><head><meta charset=utf-8><title>Doken</title></head><body>Successfully signed in. Close current tab.</body></html>");
+                    let mut response = Response::from_string("<!doctype html><html lang=\"en\"><script>window.close();</script><head><meta charset=utf-8><title>Doken</title></head><body>Successfully signed in. Close current tab.</body></html>");
                     response.add_header(html_header);
 
                     request.respond(response)?;
