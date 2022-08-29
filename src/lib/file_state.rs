@@ -36,7 +36,7 @@ impl FileState {
     async fn read(&self) -> DokenState {
         let text = fs::read_to_string(&self.file_path)
             .await
-            .unwrap_or("".to_string());
+            .unwrap_or_default();
 
         let data = HashMap::new();
         serde_json::from_str::<DokenState>(&text).unwrap_or(DokenState { version: 1, data })
