@@ -13,13 +13,16 @@ mod lib;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = lib::args::Args::parse();
     let file_state = FileState::new();
-    let file_retriever = FileRetriever::new(&args)?;
 
-    let file_token_info = file_retriever.retrieve().await;
+    if !args.force {
+        let file_retriever = FileRetriever::new(&args)?;
 
-    if file_token_info.is_ok() {
-        println!("{}", file_token_info.unwrap().access_token);
-        exit(0);
+        let file_token_info = file_retriever.retrieve().await;
+
+        if file_token_info.is_ok() {
+            println!("{}", file_token_info.unwrap().access_token);
+            exit(0);
+        }
     }
 
     match args.flow {
@@ -45,6 +48,5 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("{}", token.access_token);
             exit(0);
         }
-        _ => panic!("Not implemented"),
     }
 }
