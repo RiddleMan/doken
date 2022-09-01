@@ -15,10 +15,11 @@ pub enum Flow {
         #[clap(long, default_value_t = 8081, env = "DOKEN_PORT")]
         port: u16,
     },
-    /// Implicit flow. More: https://www.rfc-editor.org/rfc/rfc6749#section-1.3.2
-    Implicit,
-    /// Client credentials flow. More: https://www.rfc-editor.org/rfc/rfc6749#section-1.3.4
-    ClientCredentials,
+    // TODO: Implement flows
+    // /// Implicit flow. More: https://www.rfc-editor.org/rfc/rfc6749#section-1.3.2
+    // Implicit,
+    // /// Client credentials flow. More: https://www.rfc-editor.org/rfc/rfc6749#section-1.3.4
+    // ClientCredentials,
 }
 
 #[derive(Debug, ArgEnum, Clone)]
