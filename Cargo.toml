@@ -17,3 +17,4 @@ url = "2.2.2"
 async-trait = "0.1.57"
 mime = "0.3.16"
 oauth2 = { version = "4.2.3", features = ["reqwest"] }
+dotenv = "0.15.0"
