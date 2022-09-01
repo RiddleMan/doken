@@ -11,7 +11,7 @@ mod lib;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let args = lib::args::Args::parse();
+    let args = lib::args::Args::parse()?;
     let file_state = FileState::new();
 
     if !args.force {

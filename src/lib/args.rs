@@ -1,5 +1,7 @@
 use clap::{ArgEnum, Parser, Subcommand};
 use dotenv::dotenv;
+use std::error::Error;
+use std::io;
 
 #[derive(Subcommand, Debug)]
 pub enum Flow {
@@ -47,9 +49,13 @@ pub struct Arguments {
     #[clap(long, env = "DOKEN_CLIENT_ID")]
     pub client_id: String,
 
-    /// OAuth 2.0 Client Secret https://www.rfc-editor.org/rfc/rfc6749#section-2.3.1
+    /// OAuth 2.0 Client Secret. Please use `--client-secret-stdin`, because it's not get stored in a shell history.  https://www.rfc-editor.org/rfc/rfc6749#section-2.3.1
     #[clap(long, env = "DOKEN_CLIENT_SECRET")]
     pub client_secret: Option<String>,
+
+    /// OAuth 2.0 Client Secret from standard input https://www.rfc-editor.org/rfc/rfc6749#section-2.3.1
+    #[clap(long, action, default_value_t = false)]
+    pub client_secret_stdin: bool,
 
     /// OAuth 2.0 Scope https://www.rfc-editor.org/rfc/rfc6749#section-3.3
     #[clap(long, default_value = "offline_access", env = "DOKEN_SCOPE")]
@@ -71,9 +77,22 @@ pub struct Arguments {
 pub struct Args;
 
 impl Args {
-    pub fn parse() -> Arguments {
+    pub fn parse() -> Result<Arguments, Box<dyn Error>> {
         if dotenv().is_ok() {}
 
-        Arguments::parse()
+        let mut args: Arguments = Arguments::parse();
+
+        if args.client_secret.is_some() {
+            eprintln!("Please use `--client-secret-stdin` as a more secure variant.");
+        }
+
+        if args.client_secret_stdin {
+            let mut client_secret = String::new();
+            eprint!("Client Secret: ");
+            io::stdin().read_line(&mut client_secret)?;
+            args.client_secret = Some(client_secret.trim().to_string());
+        }
+
+        Ok(args)
     }
 }
