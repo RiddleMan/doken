@@ -1,9 +1,7 @@
 use clap::{ArgEnum, Parser, Subcommand};
 use dotenv::dotenv;
-use serde::de::Unexpected::Str;
 use std::error::Error;
 use std::io;
-use std::process::exit;
 
 #[derive(Subcommand, Debug)]
 pub enum Flow {
