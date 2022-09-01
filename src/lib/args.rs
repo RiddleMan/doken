@@ -59,6 +59,10 @@ pub struct Arguments {
     #[clap(long, env = "DOKEN_AUDIENCE")]
     pub audience: Option<String>,
 
+    /// When turned on ignores the state file and continues with a fresh flow
+    #[clap(short, long, action, default_value_t = false)]
+    pub force: bool,
+
     /// Token type: OpenID Connect ID Token or OAuth 2.0 Access Token
     #[clap(long, arg_enum, default_value_t = TokenType::AccessToken, env = "DOKEN_TOKEN_TYPE")]
     pub token_type: TokenType,

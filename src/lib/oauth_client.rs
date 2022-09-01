@@ -19,7 +19,6 @@ impl<'a> OAuthClient<'a> {
         match args.flow {
             Flow::AuthorizationCodeWithPKCE { port } => port,
             Flow::AuthorizationCode { port } => port,
-            _ => unreachable!(),
         }
     }
 
