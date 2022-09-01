@@ -28,8 +28,8 @@ impl<'a> OAuthClient<'a> {
         let client = BasicClient::new(
             ClientId::new(args.client_id.to_string()),
             args.client_secret.clone().map(ClientSecret::new),
-            AuthUrl::new(args.authorization_url.to_string())?,
-            Some(TokenUrl::new(args.token_url.to_string())?),
+            AuthUrl::new(args.authorization_url.to_owned().unwrap())?,
+            Some(TokenUrl::new(args.token_url.to_owned().unwrap())?),
         )
         .set_redirect_uri(RedirectUrl::new(format!("http://localhost:{}", port)).unwrap());
 

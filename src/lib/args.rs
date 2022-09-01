@@ -1,4 +1,4 @@
-use clap::{ArgEnum, Parser, Subcommand};
+use clap::{ArgEnum, ArgGroup, Command, CommandFactory, ErrorKind, Parser, Subcommand};
 use dotenv::dotenv;
 use std::error::Error;
 use std::io;
@@ -32,6 +32,18 @@ pub enum TokenType {
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about)]
+#[clap(group(
+    ArgGroup::new("oauth2")
+        .multiple(true)
+        .args(&["token-url", "authorization-url"])
+        .requires_all(&["token-url", "authorization-url"])
+        .conflicts_with("oidc")
+))]
+#[clap(group(
+    ArgGroup::new("oidc")
+        .arg("discovery-url")
+        .conflicts_with("oauth2")
+))]
 pub struct Arguments {
     /// Authentication flow
     #[clap(subcommand)]
@@ -39,11 +51,15 @@ pub struct Arguments {
 
     /// OAuth 2.0 token exchange url
     #[clap(long, env = "DOKEN_TOKEN_URL")]
-    pub token_url: String,
+    pub token_url: Option<String>,
 
     /// OAuth 2.0 authorization initiation url
     #[clap(long, env = "DOKEN_AUTHORIZATION_URL")]
-    pub authorization_url: String,
+    pub authorization_url: Option<String>,
+
+    /// OpenID Connect discovery url
+    #[clap(long, env = "DOKEN_DISCOVERY_URL")]
+    pub discovery_url: Option<String>,
 
     /// OAuth 2.0 Client Identifier https://www.rfc-editor.org/rfc/rfc6749#section-2.2
     #[clap(long, env = "DOKEN_CLIENT_ID")]
@@ -81,6 +97,20 @@ impl Args {
         if dotenv().is_ok() {}
 
         let mut args: Arguments = Arguments::parse();
+
+        let mut cmd: Command = Arguments::command();
+
+        if args.token_url.is_none()
+            && args.authorization_url.is_none()
+            && args.discovery_url.is_none()
+        {
+            cmd.error(
+                ErrorKind::MissingRequiredArgument,
+                // TODO: match green color as the rest of clap messages
+                "<--token-url, --authorization-url|--discovery-url> arguments have to be provided",
+            )
+            .exit();
+        }
 
         if args.client_secret.is_some() {
             eprintln!("Please use `--client-secret-stdin` as a more secure variant.");
