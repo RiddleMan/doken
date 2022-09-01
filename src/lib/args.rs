@@ -1,4 +1,5 @@
 use clap::{ArgEnum, Parser, Subcommand};
+use dotenv::dotenv;
 
 #[derive(Subcommand, Debug)]
 pub enum Flow {
@@ -52,6 +53,8 @@ pub struct Args;
 
 impl Args {
     pub fn parse() -> Arguments {
+        if dotenv().is_ok() {}
+
         Arguments::parse()
     }
 }
