@@ -8,6 +8,12 @@ Tool for getting tokens from OAuth 2.0/OpenID Connect providers.
 * Refreshing token without opening a browser if IdP provides _refresh_token_
 * Reading options from CLI Arguments, Environment variables, _.env_ file
 
+## Installation
+
+```shell
+brew tap RiddleMan/tap && brew install doken
+```
+
 ## Usage
 
 ### ⚠️ _Authorization code_ and _Authorization Code with PKCE_ notice
