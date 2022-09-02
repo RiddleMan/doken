@@ -60,10 +60,20 @@ impl<'a> OAuthClient<'a> {
     }
 
     pub async fn new(args: &Arguments) -> Result<OAuthClient, Box<dyn Error>> {
+        log::debug!("Creating OAuthClient...");
         let client = if let Some(discovery_url) = args.discovery_url.to_owned() {
+            log::debug!(
+                "Using `--discovery-url`={} to get token_url and authorization_url ",
+                discovery_url
+            );
             let (token_url, authorization_url) =
                 Self::get_endpoints_from_discovery_url(discovery_url).await?;
 
+            log::debug!(
+                "Resolved token_url={} and authorization_url={}",
+                token_url,
+                authorization_url
+            );
             Self::get_client(args, token_url, authorization_url)
         } else {
             Self::get_client(
@@ -72,6 +82,8 @@ impl<'a> OAuthClient<'a> {
                 args.authorization_url.to_owned().unwrap(),
             )
         }?;
+
+        log::debug!("OAuthClient created");
 
         Ok(OAuthClient {
             args,
@@ -101,6 +113,7 @@ impl<'a> OAuthClient<'a> {
         code: &str,
         code_verifier: Option<PkceCodeVerifier>,
     ) -> Result<BasicTokenResponse, Box<dyn Error>> {
+        log::debug!("Exchanging code for a token...");
         let mut builder = self
             .inner
             .exchange_code(AuthorizationCode::new(code.to_string()));
@@ -109,7 +122,8 @@ impl<'a> OAuthClient<'a> {
             builder = builder.set_pkce_verifier(verifier);
         }
 
-        let token = builder.request_async(async_http_client).await?;
+        let token: BasicTokenResponse = builder.request_async(async_http_client).await?;
+        log::debug!("Exchange done");
 
         Ok(token)
     }
@@ -118,12 +132,17 @@ impl<'a> OAuthClient<'a> {
         &self,
         refresh_token: String,
     ) -> Result<BasicTokenResponse, Box<dyn Error>> {
+        log::debug!("Refreshing token...");
+
         let refresh_token = RefreshToken::new(refresh_token);
 
-        Ok(self
+        let response = self
             .inner
             .exchange_refresh_token(&refresh_token)
             .request_async(async_http_client)
-            .await?)
+            .await?;
+
+        log::debug!("Refresh done");
+        Ok(response)
     }
 }

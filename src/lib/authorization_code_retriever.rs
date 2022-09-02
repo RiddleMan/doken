@@ -29,7 +29,9 @@ impl<'a> AuthorizationCodeRetriever<'a> {
 
     fn open_token_url(&self) -> io::Result<()> {
         let (url, _) = self.oauth_client.authorize_url(None);
+        log::debug!("Using `{}` url to initiate user session", url);
 
+        log::debug!("Opening a browser...");
         let status = Command::new("open").arg(url.as_str()).status()?;
 
         if !status.success() {

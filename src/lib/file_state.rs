@@ -1,7 +1,7 @@
 use crate::lib::token_info::TokenInfo;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use tokio::fs;
 
 type ClientId = String;
