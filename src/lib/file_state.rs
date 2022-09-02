@@ -33,6 +33,7 @@ impl FileState {
     }
 
     async fn read(&self) -> DokenState {
+        log::debug!("Reading the state file");
         let text = fs::read_to_string(&self.file_path)
             .await
             .unwrap_or_default();
@@ -42,6 +43,7 @@ impl FileState {
     }
 
     async fn write(&self, state: &DokenState) -> Result<(), Box<dyn std::error::Error>> {
+        log::debug!("Writing the state file");
         let state_str = serde_json::to_string(state).unwrap();
 
         fs::write(&self.file_path, state_str).await?;
@@ -50,6 +52,10 @@ impl FileState {
     }
 
     pub async fn read_token_info(&self, client_id: &String) -> Option<TokenInfo> {
+        log::debug!(
+            "Reading token info for client_id: {} from the state",
+            client_id
+        );
         let state = self.read().await;
 
         state.data.get(client_id).cloned()
@@ -60,6 +66,11 @@ impl FileState {
         client_id: String,
         token_info: TokenInfo,
     ) -> Result<(), Box<dyn std::error::Error>> {
+        log::debug!(
+            "Saving token info: {:#?} for client_id: {} to the state",
+            token_info,
+            client_id
+        );
         let mut state = self.read().await;
 
         state.data.insert(client_id, token_info);
@@ -73,6 +84,10 @@ impl FileState {
         &self,
         client_id: String,
     ) -> Result<(), Box<dyn std::error::Error>> {
+        log::debug!(
+            "Clearing token info for client_id: {} in the state",
+            client_id
+        );
         let mut state = self.read().await;
 
         state.data.remove(&client_id);

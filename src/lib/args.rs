@@ -127,7 +127,7 @@ impl Args {
             args.client_secret = Some(client_secret.trim().to_string());
         }
 
-        log::debug!("Argument parsing done.");
+        log::debug!("Argument parsing done");
         log::debug!("Running with arguments: {:#?}", args);
 
         Ok(args)
