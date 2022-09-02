@@ -40,8 +40,6 @@ impl<'a> OAuthClient<'a> {
             .await
             .expect("Couldn't process json given by `--discovery-url`");
 
-        println!("{:?}", result);
-
         Ok((result.token_endpoint, result.authorization_endpoint))
     }
 
