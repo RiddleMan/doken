@@ -3,7 +3,7 @@ use dotenv::dotenv;
 use std::error::Error;
 use std::io;
 
-#[derive(Subcommand, Debug)]
+#[derive(Subcommand)]
 pub enum Flow {
     /// Authorization code with PKCE flow. More: https://www.rfc-editor.org/rfc/rfc7636
     AuthorizationCodeWithPKCE {
@@ -24,13 +24,13 @@ pub enum Flow {
     // ClientCredentials,
 }
 
-#[derive(Debug, ArgEnum, Clone)]
+#[derive(ArgEnum, Clone)]
 pub enum TokenType {
     IdToken,
     AccessToken,
 }
 
-#[derive(Parser, Debug)]
+#[derive(Parser)]
 #[clap(author, version, about)]
 #[clap(group(
     ArgGroup::new("oauth2")
