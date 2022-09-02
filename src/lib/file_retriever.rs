@@ -18,15 +18,18 @@ impl Display for TokenInfoNotFoundError {
 impl Error for TokenInfoNotFoundError {}
 
 pub struct FileRetriever<'a> {
-    oauth_client: OAuthClient<'a>,
+    oauth_client: &'a OAuthClient<'a>,
     file_state: FileState,
     args: &'a Arguments,
 }
 
 impl<'a> FileRetriever<'a> {
-    pub async fn new(args: &Arguments) -> Result<FileRetriever, Box<dyn Error>> {
+    pub async fn new<'b>(
+        args: &'b Arguments,
+        oauth_client: &'b OAuthClient<'b>,
+    ) -> Result<FileRetriever<'b>, Box<dyn Error>> {
         Ok(FileRetriever {
-            oauth_client: OAuthClient::new(args).await?,
+            oauth_client,
             file_state: FileState::new(),
             args,
         })

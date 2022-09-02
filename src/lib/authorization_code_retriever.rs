@@ -8,18 +8,16 @@ use std::io;
 use std::process::Command;
 
 pub struct AuthorizationCodeRetriever<'a> {
-    oauth_client: OAuthClient<'a>,
+    oauth_client: &'a OAuthClient<'a>,
     args: &'a Arguments,
 }
 
 impl<'a> AuthorizationCodeRetriever<'a> {
-    pub async fn new(
-        args: &Arguments,
-    ) -> Result<AuthorizationCodeRetriever, Box<dyn std::error::Error>> {
-        Ok(AuthorizationCodeRetriever {
-            oauth_client: OAuthClient::new(args).await?,
-            args,
-        })
+    pub async fn new<'b>(
+        args: &'b Arguments,
+        oauth_client: &'b OAuthClient<'b>,
+    ) -> Result<AuthorizationCodeRetriever<'b>, Box<dyn std::error::Error>> {
+        Ok(AuthorizationCodeRetriever { oauth_client, args })
     }
 
     fn get_port(args: &Arguments) -> u16 {
