@@ -85,6 +85,10 @@ pub struct Arguments {
     #[clap(short, long, action, default_value_t = false)]
     pub force: bool,
 
+    /// Add diagnostics info
+    #[clap(short, long, action, default_value_t = false)]
+    pub debug: bool,
+
     /// Token type: OpenID Connect ID Token or OAuth 2.0 Access Token
     #[clap(long, arg_enum, default_value_t = TokenType::AccessToken, env = "DOKEN_TOKEN_TYPE")]
     pub token_type: TokenType,

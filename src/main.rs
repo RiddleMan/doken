@@ -6,6 +6,7 @@ use crate::lib::file_state::FileState;
 use crate::lib::oauth_client::OAuthClient;
 use crate::lib::token_retriever::TokenRetriever;
 use lib::token_info::TokenInfo;
+use log::LevelFilter;
 use std::process::exit;
 
 mod lib;
@@ -15,6 +16,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
 
     let args = lib::args::Args::parse()?;
+
+    if args.debug {
+        log::set_max_level(LevelFilter::Debug);
+    }
+
     let file_state = FileState::new();
     let oauth_client = OAuthClient::new(&args).await?;
 
