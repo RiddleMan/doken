@@ -30,7 +30,9 @@ impl<'a> AuthorizationCodeWithPKCERetriever<'a> {
 
     fn open_token_url(&self, pkce_challenge: PkceCodeChallenge) -> io::Result<()> {
         let (url, _) = self.oauth_client.authorize_url(Some(pkce_challenge));
+        log::debug!("Using `{}` url to initiate user session", url);
 
+        log::debug!("Opening a browser...");
         let status = Command::new("open").arg(url.as_str()).status()?;
 
         if !status.success() {

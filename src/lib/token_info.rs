@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::ops::Add;
 use std::time::SystemTime;
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct TokenInfo {
     pub access_token: String,
 

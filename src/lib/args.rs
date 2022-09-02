@@ -3,7 +3,7 @@ use dotenv::dotenv;
 use std::error::Error;
 use std::io;
 
-#[derive(Subcommand)]
+#[derive(Subcommand, Debug)]
 pub enum Flow {
     /// Authorization code with PKCE flow. More: https://www.rfc-editor.org/rfc/rfc7636
     AuthorizationCodeWithPKCE {
@@ -24,13 +24,13 @@ pub enum Flow {
     // ClientCredentials,
 }
 
-#[derive(ArgEnum, Clone)]
+#[derive(ArgEnum, Clone, Debug)]
 pub enum TokenType {
     IdToken,
     AccessToken,
 }
 
-#[derive(Parser)]
+#[derive(Parser, Debug)]
 #[clap(author, version, about)]
 #[clap(group(
     ArgGroup::new("oauth2")
@@ -85,6 +85,10 @@ pub struct Arguments {
     #[clap(short, long, action, default_value_t = false)]
     pub force: bool,
 
+    /// Add diagnostics info
+    #[clap(short, long, action, default_value_t = false)]
+    pub debug: bool,
+
     /// Token type: OpenID Connect ID Token or OAuth 2.0 Access Token
     #[clap(long, arg_enum, default_value_t = TokenType::AccessToken, env = "DOKEN_TOKEN_TYPE")]
     pub token_type: TokenType,
@@ -94,16 +98,20 @@ pub struct Args;
 
 impl Args {
     pub fn parse() -> Result<Arguments, Box<dyn Error>> {
-        if dotenv().is_ok() {}
+        log::debug!("Parsing application arguments...");
+        if dotenv().is_ok() {
+            log::debug!(".env file found");
+        } else {
+            log::debug!(".env file not found. skipping...");
+        }
 
         let mut args: Arguments = Arguments::parse();
-
-        let mut cmd: Command = Arguments::command();
 
         if args.token_url.is_none()
             && args.authorization_url.is_none()
             && args.discovery_url.is_none()
         {
+            let mut cmd: Command = Arguments::command();
             cmd.error(
                 ErrorKind::MissingRequiredArgument,
                 // TODO: match green color as the rest of clap messages
@@ -122,6 +130,9 @@ impl Args {
             io::stdin().read_line(&mut client_secret)?;
             args.client_secret = Some(client_secret.trim().to_string());
         }
+
+        log::debug!("Argument parsing done");
+        log::debug!("Running with arguments: {:#?}", args);
 
         Ok(args)
     }
