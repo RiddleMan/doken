@@ -3,6 +3,7 @@ use crate::lib::authorization_code_retriever::AuthorizationCodeRetriever;
 use crate::lib::authorization_code_with_pkce_retriever::AuthorizationCodeWithPKCERetriever;
 use crate::lib::file_retriever::FileRetriever;
 use crate::lib::file_state::FileState;
+use crate::lib::oauth_client::OAuthClient;
 use crate::lib::token_retriever::TokenRetriever;
 use lib::token_info::TokenInfo;
 use std::process::exit;
@@ -13,9 +14,10 @@ mod lib;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = lib::args::Args::parse()?;
     let file_state = FileState::new();
+    let oauth_client = OAuthClient::new(&args).await?;
 
     if !args.force {
-        let file_retriever = FileRetriever::new(&args).await?;
+        let file_retriever = FileRetriever::new(&args, &oauth_client).await?;
 
         let file_token_info = file_retriever.retrieve().await;
 
@@ -27,7 +29,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match args.flow {
         Flow::AuthorizationCodeWithPKCE { port: _port } => {
-            let token = AuthorizationCodeWithPKCERetriever::new(&args)
+            let token = AuthorizationCodeWithPKCERetriever::new(&args, &oauth_client)
                 .await?
                 .retrieve()
                 .await?;
@@ -40,7 +42,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             exit(0);
         }
         Flow::AuthorizationCode { port: _port } => {
-            let token = AuthorizationCodeRetriever::new(&args)
+            let token = AuthorizationCodeRetriever::new(&args, &oauth_client)
                 .await?
                 .retrieve()
                 .await?;
