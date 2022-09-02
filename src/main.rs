@@ -15,7 +15,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let file_state = FileState::new();
 
     if !args.force {
-        let file_retriever = FileRetriever::new(&args)?;
+        let file_retriever = FileRetriever::new(&args).await?;
 
         let file_token_info = file_retriever.retrieve().await;
 
@@ -27,7 +27,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match args.flow {
         Flow::AuthorizationCodeWithPKCE { port: _port } => {
-            let token = AuthorizationCodeWithPKCERetriever::new(&args)?
+            let token = AuthorizationCodeWithPKCERetriever::new(&args)
+                .await?
                 .retrieve()
                 .await?;
 
@@ -39,7 +40,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             exit(0);
         }
         Flow::AuthorizationCode { port: _port } => {
-            let token = AuthorizationCodeRetriever::new(&args)?.retrieve().await?;
+            let token = AuthorizationCodeRetriever::new(&args)
+                .await?
+                .retrieve()
+                .await?;
 
             file_state
                 .upsert_token_info(args.client_id, token.clone())

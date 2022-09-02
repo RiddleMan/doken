@@ -24,9 +24,9 @@ pub struct FileRetriever<'a> {
 }
 
 impl<'a> FileRetriever<'a> {
-    pub fn new(args: &Arguments) -> Result<FileRetriever, Box<dyn Error>> {
+    pub async fn new(args: &Arguments) -> Result<FileRetriever, Box<dyn Error>> {
         Ok(FileRetriever {
-            oauth_client: OAuthClient::new(args)?,
+            oauth_client: OAuthClient::new(args).await?,
             file_state: FileState::new(),
             args,
         })

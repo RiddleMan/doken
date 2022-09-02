@@ -112,7 +112,7 @@ impl Args {
             .exit();
         }
 
-        if args.client_secret.is_some() {
+        if args.client_secret.is_some() && std::env::var("DOKEN_CLIENT_SECRET").is_err() {
             eprintln!("Please use `--client-secret-stdin` as a more secure variant.");
         }
 

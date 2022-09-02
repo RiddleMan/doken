@@ -13,9 +13,11 @@ pub struct AuthorizationCodeRetriever<'a> {
 }
 
 impl<'a> AuthorizationCodeRetriever<'a> {
-    pub fn new(args: &Arguments) -> Result<AuthorizationCodeRetriever, Box<dyn std::error::Error>> {
+    pub async fn new(
+        args: &Arguments,
+    ) -> Result<AuthorizationCodeRetriever, Box<dyn std::error::Error>> {
         Ok(AuthorizationCodeRetriever {
-            oauth_client: OAuthClient::new(args)?,
+            oauth_client: OAuthClient::new(args).await?,
             args,
         })
     }
