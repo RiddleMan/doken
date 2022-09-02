@@ -6,12 +6,20 @@ use oauth2::{
     AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, PkceCodeChallenge,
     PkceCodeVerifier, RedirectUrl, RefreshToken, Scope, TokenUrl,
 };
+use serde::{Deserialize, Serialize};
 use std::error::Error;
 use url::Url;
 
 pub struct OAuthClient<'a> {
     args: &'a Arguments,
     inner: BasicClient,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct OpenIDProviderMetadata {
+    token_endpoint: String,
+
+    authorization_endpoint: String,
 }
 
 impl<'a> OAuthClient<'a> {
@@ -22,16 +30,50 @@ impl<'a> OAuthClient<'a> {
         }
     }
 
-    pub fn new(args: &Arguments) -> Result<OAuthClient, Box<dyn Error>> {
+    async fn get_endpoints_from_discovery_url(
+        discovery_url: String,
+    ) -> Result<(String, String), Box<dyn Error>> {
+        let result = reqwest::get(discovery_url.to_owned())
+            .await
+            .expect("Couldn't reach out to provided `--discovery-url`")
+            .json::<OpenIDProviderMetadata>()
+            .await
+            .expect("Couldn't process json given by `--discovery-url`");
+
+        println!("{:?}", result);
+
+        Ok((result.token_endpoint, result.authorization_endpoint))
+    }
+
+    fn get_client(
+        args: &Arguments,
+        token_url: String,
+        authorization_url: String,
+    ) -> Result<BasicClient, Box<dyn Error>> {
         let port = Self::get_port(args);
 
-        let client = BasicClient::new(
-            ClientId::new(args.client_id.to_string()),
+        Ok(BasicClient::new(
+            ClientId::new(args.client_id.to_owned()),
             args.client_secret.clone().map(ClientSecret::new),
-            AuthUrl::new(args.authorization_url.to_string())?,
-            Some(TokenUrl::new(args.token_url.to_string())?),
+            AuthUrl::new(authorization_url)?,
+            Some(TokenUrl::new(token_url)?),
         )
-        .set_redirect_uri(RedirectUrl::new(format!("http://localhost:{}", port)).unwrap());
+        .set_redirect_uri(RedirectUrl::new(format!("http://localhost:{}", port)).unwrap()))
+    }
+
+    pub async fn new(args: &Arguments) -> Result<OAuthClient, Box<dyn Error>> {
+        let client = if let Some(discovery_url) = args.discovery_url.to_owned() {
+            let (token_url, authorization_url) =
+                Self::get_endpoints_from_discovery_url(discovery_url).await?;
+
+            Self::get_client(args, token_url, authorization_url)
+        } else {
+            Self::get_client(
+                args,
+                args.token_url.to_owned().unwrap(),
+                args.authorization_url.to_owned().unwrap(),
+            )
+        }?;
 
         Ok(OAuthClient {
             args,

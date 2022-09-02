@@ -14,11 +14,11 @@ pub struct AuthorizationCodeWithPKCERetriever<'a> {
 }
 
 impl<'a> AuthorizationCodeWithPKCERetriever<'a> {
-    pub fn new(
+    pub async fn new(
         args: &Arguments,
     ) -> Result<AuthorizationCodeWithPKCERetriever, Box<dyn std::error::Error>> {
         Ok(AuthorizationCodeWithPKCERetriever {
-            oauth_client: OAuthClient::new(args)?,
+            oauth_client: OAuthClient::new(args).await?,
             args,
         })
     }
