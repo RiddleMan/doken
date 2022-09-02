@@ -24,8 +24,7 @@ impl FileState {
                 home_dir
             }
 
-            // TODO: Fallback path if cannot get home_dir
-            None => Path::new("asdf").to_path_buf(),
+            None => panic!("Couldn't access $HOME_DIR"),
         };
 
         FileState {
