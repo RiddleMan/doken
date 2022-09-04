@@ -5,6 +5,7 @@ pub mod client_credentials_retriever;
 pub mod file_retriever;
 pub mod file_state;
 pub mod oauth_client;
+pub mod openidc_discovery;
 mod server;
 pub mod token_info;
 pub mod token_retriever;

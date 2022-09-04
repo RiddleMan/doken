@@ -1,3 +1,4 @@
+use crate::lib;
 use crate::lib::args::Arguments;
 use oauth2::basic::{BasicClient, BasicTokenResponse};
 use oauth2::reqwest::async_http_client;
@@ -5,7 +6,6 @@ use oauth2::{
     AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, PkceCodeChallenge,
     PkceCodeVerifier, RedirectUrl, RefreshToken, Scope, TokenUrl,
 };
-use serde::{Deserialize, Serialize};
 use std::error::Error;
 use url::Url;
 
@@ -14,27 +14,7 @@ pub struct OAuthClient<'a> {
     inner: BasicClient,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
-pub struct OpenIDProviderMetadata {
-    token_endpoint: String,
-
-    authorization_endpoint: String,
-}
-
 impl<'a> OAuthClient<'a> {
-    async fn get_endpoints_from_discovery_url(
-        discovery_url: String,
-    ) -> Result<(String, String), Box<dyn Error>> {
-        let result = reqwest::get(discovery_url.to_owned())
-            .await
-            .expect("Couldn't reach out to provided `--discovery-url`")
-            .json::<OpenIDProviderMetadata>()
-            .await
-            .expect("Couldn't process json given by `--discovery-url`");
-
-        Ok((result.token_endpoint, result.authorization_endpoint))
-    }
-
     fn get_client(
         args: &Arguments,
         token_url: String,
@@ -53,27 +33,29 @@ impl<'a> OAuthClient<'a> {
 
     pub async fn new(args: &Arguments) -> Result<OAuthClient, Box<dyn Error>> {
         log::debug!("Creating OAuthClient...");
-        let client = if let Some(discovery_url) = args.discovery_url.to_owned() {
-            log::debug!(
-                "Using `--discovery-url`={} to get token_url and authorization_url ",
-                discovery_url
-            );
-            let (token_url, authorization_url) =
-                Self::get_endpoints_from_discovery_url(discovery_url).await?;
 
-            log::debug!(
-                "Resolved token_url={} and authorization_url={}",
-                token_url,
-                authorization_url
-            );
-            Self::get_client(args, token_url, authorization_url)
-        } else {
-            Self::get_client(
-                args,
-                args.token_url.to_owned().unwrap(),
-                args.authorization_url.to_owned().unwrap(),
-            )
-        }?;
+        let (token_url, authorization_url) =
+            if let Some(discovery_url) = args.discovery_url.to_owned() {
+                log::debug!(
+                    "Using `--discovery-url`={} to get token_url and authorization_url ",
+                    discovery_url
+                );
+
+                lib::openidc_discovery::get_endpoints_from_discovery_url(discovery_url).await?
+            } else {
+                (
+                    args.token_url.to_owned().unwrap(),
+                    args.authorization_url.to_owned().unwrap(),
+                )
+            };
+
+        log::debug!(
+            "Resolved token_url={} and authorization_url={}",
+            token_url,
+            authorization_url
+        );
+
+        let client = Self::get_client(args, token_url, authorization_url)?;
 
         log::debug!("OAuthClient created");
 
