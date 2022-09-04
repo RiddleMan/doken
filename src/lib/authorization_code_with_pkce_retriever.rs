@@ -14,11 +14,11 @@ pub struct AuthorizationCodeWithPKCERetriever<'a> {
 }
 
 impl<'a> AuthorizationCodeWithPKCERetriever<'a> {
-    pub async fn new<'b>(
+    pub fn new<'b>(
         args: &'b Arguments,
         oauth_client: &'b OAuthClient<'b>,
-    ) -> Result<AuthorizationCodeWithPKCERetriever<'b>, Box<dyn std::error::Error>> {
-        Ok(AuthorizationCodeWithPKCERetriever { oauth_client, args })
+    ) -> AuthorizationCodeWithPKCERetriever<'b> {
+        AuthorizationCodeWithPKCERetriever { oauth_client, args }
     }
 
     fn open_token_url(&self, pkce_challenge: PkceCodeChallenge) -> io::Result<()> {

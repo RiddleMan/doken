@@ -4,6 +4,7 @@ use crate::lib::authorization_code_with_pkce_retriever::AuthorizationCodeWithPKC
 use crate::lib::client_credentials_retriever::ClientCredentialsRetriever;
 use crate::lib::file_retriever::FileRetriever;
 use crate::lib::file_state::FileState;
+use crate::lib::implicit_retriever::ImplicitRetriever;
 use crate::lib::oauth_client::OAuthClient;
 use crate::lib::token_retriever::TokenRetriever;
 use lib::token_info::TokenInfo;
@@ -31,7 +32,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let oauth_client = OAuthClient::new(&args).await?;
 
     if !args.force {
-        let file_retriever = FileRetriever::new(&args, &oauth_client).await?;
+        let file_retriever = FileRetriever::new(&args, &oauth_client);
 
         let file_token_info = file_retriever.retrieve().await;
 
@@ -41,29 +42,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    let token_info = match args.flow {
-        Flow::AuthorizationCodeWithPKCE { .. } => {
-            AuthorizationCodeWithPKCERetriever::new(&args, &oauth_client)
-                .await?
-                .retrieve()
-                .await?
-        }
+    let retriever: Box<dyn TokenRetriever> = match args.flow {
+        Flow::AuthorizationCodeWithPKCE { .. } => Box::new(
+            AuthorizationCodeWithPKCERetriever::new(&args, &oauth_client),
+        ),
         Flow::AuthorizationCode { .. } => {
-            AuthorizationCodeRetriever::new(&args, &oauth_client)
-                .await?
-                .retrieve()
-                .await?
+            Box::new(AuthorizationCodeRetriever::new(&args, &oauth_client))
         }
-        Flow::ClientCredentials => {
-            ClientCredentialsRetriever::new(&args)
-                .await?
-                .retrieve()
-                .await?
-        }
+        Flow::Implicit => Box::new(ImplicitRetriever::new(&args)),
+        Flow::ClientCredentials => Box::new(ClientCredentialsRetriever::new(&args)),
     };
 
+    let token_info = retriever.retrieve().await?;
+
     file_state
-        .upsert_token_info(args.client_id, token_info.to_owned())
+        .upsert_token_info(args.client_id.to_owned(), token_info.to_owned())
         .await?;
 
     println!("{}", token_info.access_token);

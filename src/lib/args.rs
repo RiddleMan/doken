@@ -9,9 +9,8 @@ pub enum Flow {
     AuthorizationCodeWithPKCE,
     /// Authorization code flow. More: https://www.rfc-editor.org/rfc/rfc6749#section-1.3.1
     AuthorizationCode,
-    // TODO: Implement flows
     // /// Implicit flow. More: https://www.rfc-editor.org/rfc/rfc6749#section-1.3.2
-    // Implicit,
+    Implicit,
     /// Client credentials flow. More: https://www.rfc-editor.org/rfc/rfc6749#section-1.3.4
     ClientCredentials,
 }
@@ -141,6 +140,23 @@ impl Args {
                         "--client-secret or --client-secret-stdin is required while used with `client-credentials` flow.",
                     )
                         .exit();
+                }
+            }
+            Flow::Implicit { .. } => {
+                if args.token_url.is_some() {
+                    cmd.error(
+                        ErrorKind::ArgumentConflict,
+                        "--token-url cannot be used with:\n\t--flow implicit",
+                    )
+                    .exit();
+                }
+
+                if args.authorization_url.is_none() && args.discovery_url.is_none() {
+                    cmd.error(
+                        ErrorKind::MissingRequiredArgument,
+                        "<--authorization-url|--discovery-url> arguments have to be provided",
+                    )
+                    .exit();
                 }
             }
         }

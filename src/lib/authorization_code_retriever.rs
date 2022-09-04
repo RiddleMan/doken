@@ -13,11 +13,11 @@ pub struct AuthorizationCodeRetriever<'a> {
 }
 
 impl<'a> AuthorizationCodeRetriever<'a> {
-    pub async fn new<'b>(
+    pub fn new<'b>(
         args: &'b Arguments,
         oauth_client: &'b OAuthClient<'b>,
-    ) -> Result<AuthorizationCodeRetriever<'b>, Box<dyn std::error::Error>> {
-        Ok(AuthorizationCodeRetriever { oauth_client, args })
+    ) -> AuthorizationCodeRetriever<'b> {
+        AuthorizationCodeRetriever { oauth_client, args }
     }
 
     fn open_token_url(&self) -> io::Result<()> {

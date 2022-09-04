@@ -24,15 +24,12 @@ pub struct FileRetriever<'a> {
 }
 
 impl<'a> FileRetriever<'a> {
-    pub async fn new<'b>(
-        args: &'b Arguments,
-        oauth_client: &'b OAuthClient<'b>,
-    ) -> Result<FileRetriever<'b>, Box<dyn Error>> {
-        Ok(FileRetriever {
+    pub fn new<'b>(args: &'b Arguments, oauth_client: &'b OAuthClient<'b>) -> FileRetriever<'b> {
+        FileRetriever {
             oauth_client,
             file_state: FileState::new(),
             args,
-        })
+        }
     }
 
     async fn refresh_token(&self, refresh_token: &str) -> Result<TokenInfo, Box<dyn Error>> {
