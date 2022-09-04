@@ -2,7 +2,6 @@ use crate::lib::args::Arguments;
 use crate::lib::token_retriever::TokenRetriever;
 use crate::{lib, TokenInfo};
 use async_trait::async_trait;
-use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 use std::ops::Add;
@@ -60,21 +59,13 @@ impl<'a> TokenRetriever for ClientCredentialsRetriever<'a> {
             params.push(("audience", audience));
         }
 
-        let res = reqwest::Client::new()
+        let json = reqwest::Client::new()
             .post(token_url)
             .form(&params)
             .send()
             .await
-            .expect("Couldn't exchange credentials to a token provided by `--token-url`");
-
-        match res.status() {
-            StatusCode::OK => {}
-            status_invalid => {
-                panic!("Couldn't exchange credentials to a token provided by `--token-url`. Api responded with {}", status_invalid);
-            }
-        }
-
-        let json = res
+            .expect("Couldn't exchange credentials to a token provided by `--token-url`")
+            .error_for_status()?
             .json::<TokenEndpointResponse>()
             .await
             .expect("Couldn't process json given by --token-url");

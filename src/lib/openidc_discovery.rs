@@ -14,6 +14,7 @@ pub async fn get_endpoints_from_discovery_url(
     let result = reqwest::get(discovery_url.to_owned())
         .await
         .expect("Couldn't reach out to provided `--discovery-url`")
+        .error_for_status()?
         .json::<OpenIDProviderMetadata>()
         .await
         .expect("Couldn't process json given by `--discovery-url`");
