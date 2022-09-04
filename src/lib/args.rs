@@ -1,27 +1,19 @@
-use clap::{ArgEnum, ArgGroup, Command, CommandFactory, ErrorKind, Parser, Subcommand};
+use clap::{ArgEnum, ArgGroup, Command, CommandFactory, ErrorKind, Parser};
 use dotenv::dotenv;
 use std::error::Error;
 use std::io;
 
-#[derive(Subcommand, Debug)]
+#[derive(ArgEnum, Clone, Debug)]
 pub enum Flow {
     /// Authorization code with PKCE flow. More: https://www.rfc-editor.org/rfc/rfc7636
-    AuthorizationCodeWithPKCE {
-        /// Port for callback url
-        #[clap(long, default_value_t = 8081, env = "DOKEN_PORT")]
-        port: u16,
-    },
+    AuthorizationCodeWithPKCE,
     /// Authorization code flow. More: https://www.rfc-editor.org/rfc/rfc6749#section-1.3.1
-    AuthorizationCode {
-        /// Port for callback url
-        #[clap(long, default_value_t = 8081, env = "DOKEN_PORT")]
-        port: u16,
-    },
+    AuthorizationCode,
     // TODO: Implement flows
     // /// Implicit flow. More: https://www.rfc-editor.org/rfc/rfc6749#section-1.3.2
     // Implicit,
-    // /// Client credentials flow. More: https://www.rfc-editor.org/rfc/rfc6749#section-1.3.4
-    // ClientCredentials,
+    /// Client credentials flow. More: https://www.rfc-editor.org/rfc/rfc6749#section-1.3.4
+    ClientCredentials,
 }
 
 #[derive(ArgEnum, Clone, Debug)]
@@ -30,6 +22,9 @@ pub enum TokenType {
     AccessToken,
 }
 
+// TODO: Solve the issue that Client Credentials don't need --authorization-url,
+// but if we move it to subcommand, then we couldn't execute logic that will group and
+// require them together
 #[derive(Parser, Debug)]
 #[clap(author, version, about)]
 #[clap(group(
@@ -46,7 +41,7 @@ pub enum TokenType {
 ))]
 pub struct Arguments {
     /// Authentication flow
-    #[clap(subcommand)]
+    #[clap(long, arg_enum, default_value_t = Flow::AuthorizationCodeWithPKCE, env = "DOKEN_FLOW")]
     pub flow: Flow,
 
     /// OAuth 2.0 token exchange url
@@ -64,6 +59,10 @@ pub struct Arguments {
     /// OAuth 2.0 Client Identifier https://www.rfc-editor.org/rfc/rfc6749#section-2.2
     #[clap(long, env = "DOKEN_CLIENT_ID")]
     pub client_id: String,
+
+    /// Port for callback url
+    #[clap(long, default_value_t = 8081, env = "DOKEN_PORT")]
+    pub port: u16,
 
     /// OAuth 2.0 Client Secret. Please use `--client-secret-stdin`, because it's not get stored in a shell history.  https://www.rfc-editor.org/rfc/rfc6749#section-2.3.1
     #[clap(long, env = "DOKEN_CLIENT_SECRET")]
@@ -97,29 +96,50 @@ pub struct Arguments {
 pub struct Args;
 
 impl Args {
-    pub fn parse() -> Result<Arguments, Box<dyn Error>> {
-        log::debug!("Parsing application arguments...");
-        if dotenv().is_ok() {
-            log::debug!(".env file found");
-        } else {
-            log::debug!(".env file not found. skipping...");
+    fn assert_flow_specific_arguments(args: &Arguments) {
+        let mut cmd: Command = Arguments::command();
+
+        match args.flow {
+            Flow::AuthorizationCodeWithPKCE { .. } => {
+                if args.token_url.is_none()
+                    && args.authorization_url.is_none()
+                    && args.discovery_url.is_none()
+                {
+                    cmd.error(
+                        ErrorKind::MissingRequiredArgument,
+                        // TODO: match green color as the rest of clap messages
+                        "<--token-url, --authorization-url|--discovery-url> arguments have to be provided",
+                    )
+                        .exit();
+                }
+            }
+            Flow::AuthorizationCode { .. } => {
+                if args.token_url.is_none()
+                    && args.authorization_url.is_none()
+                    && args.discovery_url.is_none()
+                {
+                    cmd.error(
+                        ErrorKind::MissingRequiredArgument,
+                        // TODO: match green color as the rest of clap messages
+                        "<--token-url, --authorization-url|--discovery-url> arguments have to be provided",
+                    )
+                        .exit();
+                }
+            }
+            Flow::ClientCredentials { .. } => {
+                if args.client_secret.is_none() && !args.client_secret_stdin {
+                    cmd.error(
+                        ErrorKind::MissingRequiredArgument,
+                        // TODO: match green color as the rest of clap messages
+                        "--client-secret or --client-secret-stdin is required while used with `client-credentials` flow.",
+                    )
+                        .exit();
+                }
+            }
         }
+    }
 
-        let mut args: Arguments = Arguments::parse();
-
-        if args.token_url.is_none()
-            && args.authorization_url.is_none()
-            && args.discovery_url.is_none()
-        {
-            let mut cmd: Command = Arguments::command();
-            cmd.error(
-                ErrorKind::MissingRequiredArgument,
-                // TODO: match green color as the rest of clap messages
-                "<--token-url, --authorization-url|--discovery-url> arguments have to be provided",
-            )
-            .exit();
-        }
-
+    fn parse_client_secret(mut args: Arguments) -> Result<Arguments, Box<dyn Error>> {
         if args.client_secret.is_some() && std::env::var("DOKEN_CLIENT_SECRET").is_err() {
             eprintln!("Please use `--client-secret-stdin` as a more secure variant.");
         }
@@ -130,6 +150,21 @@ impl Args {
             io::stdin().read_line(&mut client_secret)?;
             args.client_secret = Some(client_secret.trim().to_string());
         }
+
+        Ok(args)
+    }
+
+    pub fn parse() -> Result<Arguments, Box<dyn Error>> {
+        log::debug!("Parsing application arguments...");
+        if dotenv().is_ok() {
+            log::debug!(".env file found");
+        } else {
+            log::debug!(".env file not found. skipping...");
+        }
+
+        let args = Arguments::parse();
+        Self::assert_flow_specific_arguments(&args);
+        let args = Self::parse_client_secret(args)?;
 
         log::debug!("Argument parsing done");
         log::debug!("Running with arguments: {:#?}", args);

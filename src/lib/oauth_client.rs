@@ -1,5 +1,4 @@
 use crate::lib::args::Arguments;
-use crate::Flow;
 use oauth2::basic::{BasicClient, BasicTokenResponse};
 use oauth2::reqwest::async_http_client;
 use oauth2::{
@@ -23,13 +22,6 @@ pub struct OpenIDProviderMetadata {
 }
 
 impl<'a> OAuthClient<'a> {
-    fn get_port(args: &Arguments) -> u16 {
-        match args.flow {
-            Flow::AuthorizationCodeWithPKCE { port } => port,
-            Flow::AuthorizationCode { port } => port,
-        }
-    }
-
     async fn get_endpoints_from_discovery_url(
         discovery_url: String,
     ) -> Result<(String, String), Box<dyn Error>> {
@@ -48,7 +40,7 @@ impl<'a> OAuthClient<'a> {
         token_url: String,
         authorization_url: String,
     ) -> Result<BasicClient, Box<dyn Error>> {
-        let port = Self::get_port(args);
+        let port = args.port;
 
         Ok(BasicClient::new(
             ClientId::new(args.client_id.to_owned()),

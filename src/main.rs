@@ -1,6 +1,7 @@
 use crate::lib::args::Flow;
 use crate::lib::authorization_code_retriever::AuthorizationCodeRetriever;
 use crate::lib::authorization_code_with_pkce_retriever::AuthorizationCodeWithPKCERetriever;
+use crate::lib::client_credentials_retriever::ClientCredentialsRetriever;
 use crate::lib::file_retriever::FileRetriever;
 use crate::lib::file_state::FileState;
 use crate::lib::oauth_client::OAuthClient;
@@ -40,32 +41,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    match args.flow {
-        Flow::AuthorizationCodeWithPKCE { port: _port } => {
-            let token = AuthorizationCodeWithPKCERetriever::new(&args, &oauth_client)
+    let token_info = match args.flow {
+        Flow::AuthorizationCodeWithPKCE { .. } => {
+            AuthorizationCodeWithPKCERetriever::new(&args, &oauth_client)
                 .await?
                 .retrieve()
-                .await?;
-
-            file_state
-                .upsert_token_info(args.client_id, token.clone())
-                .await?;
-
-            println!("{}", token.access_token);
-            exit(0);
+                .await?
         }
-        Flow::AuthorizationCode { port: _port } => {
-            let token = AuthorizationCodeRetriever::new(&args, &oauth_client)
+        Flow::AuthorizationCode { .. } => {
+            AuthorizationCodeRetriever::new(&args, &oauth_client)
                 .await?
                 .retrieve()
-                .await?;
-
-            file_state
-                .upsert_token_info(args.client_id, token.clone())
-                .await?;
-
-            println!("{}", token.access_token);
-            exit(0);
+                .await?
         }
-    }
+        Flow::ClientCredentials => {
+            ClientCredentialsRetriever::new(&args)
+                .await?
+                .retrieve()
+                .await?
+        }
+    };
+
+    file_state
+        .upsert_token_info(args.client_id, token_info.to_owned())
+        .await?;
+
+    println!("{}", token_info.access_token);
+    exit(0);
 }

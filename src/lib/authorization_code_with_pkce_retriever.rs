@@ -1,4 +1,4 @@
-use crate::lib::args::{Arguments, Flow};
+use crate::lib::args::Arguments;
 use crate::lib::oauth_client::OAuthClient;
 use crate::lib::server::get_code;
 use crate::lib::token_retriever::TokenRetriever;
@@ -21,13 +21,6 @@ impl<'a> AuthorizationCodeWithPKCERetriever<'a> {
         Ok(AuthorizationCodeWithPKCERetriever { oauth_client, args })
     }
 
-    fn get_port(args: &Arguments) -> u16 {
-        match args.flow {
-            Flow::AuthorizationCodeWithPKCE { port } => port,
-            _ => unreachable!(),
-        }
-    }
-
     fn open_token_url(&self, pkce_challenge: PkceCodeChallenge) -> io::Result<()> {
         let (url, _) = self.oauth_client.authorize_url(Some(pkce_challenge));
         log::debug!("Using `{}` url to initiate user session", url);
@@ -46,7 +39,7 @@ impl<'a> AuthorizationCodeWithPKCERetriever<'a> {
 #[async_trait(?Send)]
 impl<'a> TokenRetriever for AuthorizationCodeWithPKCERetriever<'a> {
     async fn retrieve(&self) -> Result<TokenInfo, Box<dyn std::error::Error>> {
-        let port = Self::get_port(self.args);
+        let port = self.args.port;
 
         let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
 
