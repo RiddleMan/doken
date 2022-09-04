@@ -22,16 +22,12 @@ pub enum TokenType {
     AccessToken,
 }
 
-// TODO: Solve the issue that Client Credentials don't need --authorization-url,
-// but if we move it to subcommand, then we couldn't execute logic that will group and
-// require them together
 #[derive(Parser, Debug)]
 #[clap(author, version, about)]
 #[clap(group(
     ArgGroup::new("oauth2")
         .multiple(true)
         .args(&["token-url", "authorization-url"])
-        .requires_all(&["token-url", "authorization-url"])
         .conflicts_with("oidc")
 ))]
 #[clap(group(
@@ -95,42 +91,53 @@ pub struct Arguments {
 
 pub struct Args;
 
+// TODO: match green color as the rest of clap messages
 impl Args {
+    fn assert_urls_for_authorization_flows(args: &Arguments) {
+        let mut cmd: Command = Arguments::command();
+
+        if args.token_url.is_none()
+            && args.authorization_url.is_none()
+            && args.discovery_url.is_none()
+        {
+            cmd.error(
+                ErrorKind::MissingRequiredArgument,
+                "<--token-url, --authorization-url|--discovery-url> arguments have to be provided",
+            )
+            .exit();
+        }
+    }
+
     fn assert_flow_specific_arguments(args: &Arguments) {
         let mut cmd: Command = Arguments::command();
 
         match args.flow {
             Flow::AuthorizationCodeWithPKCE { .. } => {
-                if args.token_url.is_none()
-                    && args.authorization_url.is_none()
-                    && args.discovery_url.is_none()
-                {
-                    cmd.error(
-                        ErrorKind::MissingRequiredArgument,
-                        // TODO: match green color as the rest of clap messages
-                        "<--token-url, --authorization-url|--discovery-url> arguments have to be provided",
-                    )
-                        .exit();
-                }
+                Self::assert_urls_for_authorization_flows(args);
             }
             Flow::AuthorizationCode { .. } => {
-                if args.token_url.is_none()
-                    && args.authorization_url.is_none()
-                    && args.discovery_url.is_none()
-                {
-                    cmd.error(
-                        ErrorKind::MissingRequiredArgument,
-                        // TODO: match green color as the rest of clap messages
-                        "<--token-url, --authorization-url|--discovery-url> arguments have to be provided",
-                    )
-                        .exit();
-                }
+                Self::assert_urls_for_authorization_flows(args);
             }
             Flow::ClientCredentials { .. } => {
+                if args.authorization_url.is_some() {
+                    cmd.error(
+                        ErrorKind::ArgumentConflict,
+                        "--authorization-url cannot be used with:\n\t--flow client-credentials",
+                    )
+                    .exit();
+                }
+
+                if args.token_url.is_none() && args.discovery_url.is_none() {
+                    cmd.error(
+                        ErrorKind::MissingRequiredArgument,
+                        "<--token-url|--discovery-url> arguments have to be provided",
+                    )
+                    .exit();
+                }
+
                 if args.client_secret.is_none() && !args.client_secret_stdin {
                     cmd.error(
                         ErrorKind::MissingRequiredArgument,
-                        // TODO: match green color as the rest of clap messages
                         "--client-secret or --client-secret-stdin is required while used with `client-credentials` flow.",
                     )
                         .exit();
