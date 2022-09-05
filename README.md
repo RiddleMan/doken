@@ -105,7 +105,7 @@ doken \
 
 ### _Implicit_ grant
 
-⚠️ Not recommended. Use [Authorization Code with PKCE Grant](#basic-authorization-code-with-pkce-flow) instead. Read more: [link](https://auth0.com/docs/get-started/authentication-and-authorization-flow/implicit-flow-with-form-post#how-it-works).
+⚠️ Not recommended. Use [Authorization Code with PKCE Grant](#basic-authorization-code-with-pkce-grant) instead. Read more: [link](https://auth0.com/docs/get-started/authentication-and-authorization-flow/implicit-flow-with-form-post#how-it-works).
 
 ```shell
 doken \
@@ -119,7 +119,7 @@ doken \
 
 ### _Resource Owner Password Client credentials_ grant
 
-⚠️ Not recommended. Use [Authorization Code Grant with PKCE](#basic-authorization-code-with-pkce-flow) instead. Read more: [link](https://auth0.com/docs/get-started/authentication-and-authorization-flow/resource-owner-password-flow).
+⚠️ Not recommended. Use [Authorization Code Grant with PKCE](#basic-authorization-code-with-pkce-grant) instead. Read more: [link](https://auth0.com/docs/get-started/authentication-and-authorization-flow/resource-owner-password-flow).
 
 ```shell
 doken \
