@@ -1,10 +1,10 @@
 use crate::lib::args::Arguments;
+use crate::lib::server::get_token_data;
 use crate::lib::token_retriever::TokenRetriever;
 use crate::{lib, TokenInfo};
 use async_trait::async_trait;
 use std::error::Error;
 use std::process::Command;
-use std::time::UNIX_EPOCH;
 use url::Url;
 
 pub struct ImplicitRetriever<'a> {
@@ -43,7 +43,6 @@ impl<'a> TokenRetriever for ImplicitRetriever<'a> {
 
         let mut url = Url::parse(authorization_url.as_str())?;
 
-        // TODO: Add scope
         url.query_pairs_mut()
             .append_pair("response_type", "token")
             .append_pair("response_mode", "form_post")
@@ -52,7 +51,11 @@ impl<'a> TokenRetriever for ImplicitRetriever<'a> {
                 "redirect_uri",
                 format!("http://localhost:{}/", self.args.port).as_str(),
             )
-            .append_pair("nonce", "s40e1m99mNO-lT8f");
+            .append_pair("scope", self.args.scope.as_str());
+
+        if let Some(ref audience) = self.args.audience {
+            url.query_pairs_mut().append_pair("audience", audience);
+        }
 
         log::debug!("Opening a browser...");
         let status = Command::new("open").arg(url.as_str()).status()?;
@@ -61,11 +64,6 @@ impl<'a> TokenRetriever for ImplicitRetriever<'a> {
             panic!("Url couldn't be opened.")
         }
 
-        Ok(TokenInfo {
-            access_token: String::new(),
-            expires: Some(UNIX_EPOCH),
-            refresh_token: None,
-            scope: None,
-        })
+        get_token_data(self.args.port).await
     }
 }

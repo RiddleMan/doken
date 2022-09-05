@@ -51,6 +51,7 @@ impl<'a> TokenRetriever for ClientCredentialsRetriever<'a> {
             ("grant_type", "client_credentials"),
             ("client_id", self.args.client_id.as_str()),
             ("client_secret", self.args.client_secret.as_deref().unwrap()),
+            ("scope", self.args.scope.as_str()),
         ];
 
         if let Some(ref audience) = self.args.audience {
