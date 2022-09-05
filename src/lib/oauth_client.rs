@@ -4,7 +4,8 @@ use oauth2::basic::{BasicClient, BasicTokenResponse};
 use oauth2::reqwest::async_http_client;
 use oauth2::{
     AuthUrl, AuthorizationCode, AuthorizationRequest, ClientId, ClientSecret, CsrfToken,
-    PkceCodeChallenge, PkceCodeVerifier, RedirectUrl, RefreshToken, Scope, TokenUrl,
+    PkceCodeChallenge, PkceCodeVerifier, RedirectUrl, RefreshToken, ResourceOwnerPassword,
+    ResourceOwnerUsername, Scope, TokenUrl,
 };
 use std::error::Error;
 use url::Url;
@@ -103,6 +104,29 @@ impl<'a> OAuthClient<'a> {
         let scope = Scope::new(self.args.scope.to_string().replace("offline_access", ""));
 
         let mut builder = self.inner.exchange_client_credentials().add_scope(scope);
+
+        if let Some(aud) = &self.args.audience {
+            builder = builder.add_extra_param("audience", aud);
+        }
+
+        let token = builder.request_async(async_http_client).await?;
+        log::debug!("Exchange done");
+        Ok(token)
+    }
+
+    pub async fn exchange_resource_owner_password_client_credentials(
+        &self,
+    ) -> Result<BasicTokenResponse, Box<dyn Error>> {
+        log::debug!("Exchanging credentials for a token...");
+
+        let username =
+            &ResourceOwnerUsername::new(self.args.username.as_deref().unwrap().to_owned());
+        let password =
+            &ResourceOwnerPassword::new(self.args.password.as_deref().unwrap().to_owned());
+        let mut builder = self
+            .inner
+            .exchange_password(username, password)
+            .add_scope(Scope::new(self.args.scope.to_string()));
 
         if let Some(aud) = &self.args.audience {
             builder = builder.add_extra_param("audience", aud);

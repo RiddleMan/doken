@@ -1,4 +1,4 @@
-use crate::lib::args::Flow;
+use crate::lib::args::Grant;
 use crate::lib::authorization_code_retriever::AuthorizationCodeRetriever;
 use crate::lib::authorization_code_with_pkce_retriever::AuthorizationCodeWithPKCERetriever;
 use crate::lib::client_credentials_retriever::ClientCredentialsRetriever;
@@ -6,6 +6,7 @@ use crate::lib::file_retriever::FileRetriever;
 use crate::lib::file_state::FileState;
 use crate::lib::implicit_retriever::ImplicitRetriever;
 use crate::lib::oauth_client::OAuthClient;
+use crate::lib::resource_owner_password_client_credentials_retriever::ResourceOwnerPasswordClientCredentialsRetriever;
 use crate::lib::token_retriever::TokenRetriever;
 use lib::token_info::TokenInfo;
 use std::env;
@@ -42,15 +43,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    let retriever: Box<dyn TokenRetriever> = match args.flow {
-        Flow::AuthorizationCodeWithPKCE { .. } => Box::new(
+    let retriever: Box<dyn TokenRetriever> = match args.grant {
+        Grant::AuthorizationCodeWithPKCE { .. } => Box::new(
             AuthorizationCodeWithPKCERetriever::new(&args, &oauth_client),
         ),
-        Flow::AuthorizationCode { .. } => {
+        Grant::AuthorizationCode { .. } => {
             Box::new(AuthorizationCodeRetriever::new(&args, &oauth_client))
         }
-        Flow::Implicit => Box::new(ImplicitRetriever::new(&args, &oauth_client)),
-        Flow::ClientCredentials => Box::new(ClientCredentialsRetriever::new(&oauth_client)),
+        Grant::Implicit => Box::new(ImplicitRetriever::new(&args, &oauth_client)),
+        Grant::ResourceOwnerPasswordClientCredentials => Box::new(
+            ResourceOwnerPasswordClientCredentialsRetriever::new(&oauth_client),
+        ),
+        Grant::ClientCredentials => Box::new(ClientCredentialsRetriever::new(&oauth_client)),
     };
 
     let token_info = retriever.retrieve().await?;
