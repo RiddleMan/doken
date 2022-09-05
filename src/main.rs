@@ -49,8 +49,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Flow::AuthorizationCode { .. } => {
             Box::new(AuthorizationCodeRetriever::new(&args, &oauth_client))
         }
-        Flow::Implicit => Box::new(ImplicitRetriever::new(&args)),
-        Flow::ClientCredentials => Box::new(ClientCredentialsRetriever::new(&args)),
+        Flow::Implicit => Box::new(ImplicitRetriever::new(&args, &oauth_client)),
+        Flow::ClientCredentials => Box::new(ClientCredentialsRetriever::new(&args, &oauth_client)),
     };
 
     let token_info = retriever.retrieve().await?;

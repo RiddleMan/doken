@@ -3,8 +3,8 @@ use crate::lib::args::Arguments;
 use oauth2::basic::{BasicClient, BasicTokenResponse};
 use oauth2::reqwest::async_http_client;
 use oauth2::{
-    AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, PkceCodeChallenge,
-    PkceCodeVerifier, RedirectUrl, RefreshToken, Scope, TokenUrl,
+    AuthUrl, AuthorizationCode, AuthorizationRequest, ClientId, ClientSecret, CsrfToken,
+    PkceCodeChallenge, PkceCodeVerifier, RedirectUrl, RefreshToken, Scope, TokenUrl,
 };
 use std::error::Error;
 use url::Url;
@@ -65,21 +65,34 @@ impl<'a> OAuthClient<'a> {
         })
     }
 
-    pub fn authorize_url(&self, pkce_challenge: Option<PkceCodeChallenge>) -> (Url, CsrfToken) {
+    fn authorization_url_builder(&self) -> AuthorizationRequest {
         let mut builder = self
             .inner
             .authorize_url(CsrfToken::new_random)
             .add_scope(Scope::new(self.args.scope.to_string()));
 
-        if let Some(challenge) = pkce_challenge {
-            builder = builder.set_pkce_challenge(challenge);
-        }
-
         if let Some(aud) = &self.args.audience {
             builder = builder.add_extra_param("audience", aud);
         }
 
+        builder
+    }
+
+    pub fn authorize_url(&self, pkce_challenge: Option<PkceCodeChallenge>) -> (Url, CsrfToken) {
+        let mut builder = self.authorization_url_builder();
+
+        if let Some(challenge) = pkce_challenge {
+            builder = builder.set_pkce_challenge(challenge);
+        }
+
         builder.url()
+    }
+
+    pub fn implicit_url(&self) -> (Url, CsrfToken) {
+        self.authorization_url_builder()
+            .add_extra_param("response_mode", "form_post")
+            .use_implicit_flow()
+            .url()
     }
 
     pub async fn exchange_code(

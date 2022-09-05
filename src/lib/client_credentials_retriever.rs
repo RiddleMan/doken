@@ -1,6 +1,6 @@
 use crate::lib::args::Arguments;
 use crate::lib::token_retriever::TokenRetriever;
-use crate::{lib, TokenInfo};
+use crate::{lib, OAuthClient, TokenInfo};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
@@ -16,11 +16,15 @@ struct TokenEndpointResponse {
 
 pub struct ClientCredentialsRetriever<'a> {
     args: &'a Arguments,
+    oauth_client: &'a OAuthClient<'a>,
 }
 
 impl<'a> ClientCredentialsRetriever<'a> {
-    pub fn new(args: &Arguments) -> ClientCredentialsRetriever {
-        ClientCredentialsRetriever { args }
+    pub fn new<'b>(
+        args: &'b Arguments,
+        oauth_client: &'b OAuthClient<'b>,
+    ) -> ClientCredentialsRetriever<'b> {
+        ClientCredentialsRetriever { args, oauth_client }
     }
 
     async fn resolve_token_url(&self) -> Result<String, Box<dyn Error>> {
