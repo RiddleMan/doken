@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 use std::ops::Add;
-use std::time::{Duration, UNIX_EPOCH};
+use std::time::{Duration, SystemTime};
 
 #[derive(Serialize, Deserialize)]
 struct TokenEndpointResponse {
@@ -71,7 +71,7 @@ impl<'a> TokenRetriever for ClientCredentialsRetriever<'a> {
 
         Ok(TokenInfo {
             access_token: json.access_token,
-            expires: Some(UNIX_EPOCH.add(Duration::from_secs(json.expires_in))),
+            expires: Some(SystemTime::now().add(Duration::from_secs(json.expires_in))),
             refresh_token: None,
             scope: None,
         })

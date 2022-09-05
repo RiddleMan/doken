@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use std::error::Error;
 use std::ops::Add;
 use std::str::FromStr;
-use std::time::{Duration, UNIX_EPOCH};
+use std::time::{Duration, SystemTime};
 use tiny_http::{Header, Method, Request, Response, Server as TinyServer};
 use url::Url;
 
@@ -79,7 +79,7 @@ impl AuthServer {
                             .to_string(),
                         refresh_token: None,
                         expires: Some(
-                            UNIX_EPOCH.add(Duration::from_secs(
+                            SystemTime::now().add(Duration::from_secs(
                                 form_fields
                                     .iter()
                                     .find(|(name, _value)| name == "expires_in")
