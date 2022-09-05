@@ -1,12 +1,12 @@
+use crate::lib;
 use crate::lib::args::Arguments;
-use crate::Flow;
 use oauth2::basic::{BasicClient, BasicTokenResponse};
 use oauth2::reqwest::async_http_client;
 use oauth2::{
-    AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, PkceCodeChallenge,
-    PkceCodeVerifier, RedirectUrl, RefreshToken, Scope, TokenUrl,
+    AuthUrl, AuthorizationCode, AuthorizationRequest, ClientId, ClientSecret, CsrfToken,
+    PkceCodeChallenge, PkceCodeVerifier, RedirectUrl, RefreshToken, ResourceOwnerPassword,
+    ResourceOwnerUsername, Scope, TokenUrl,
 };
-use serde::{Deserialize, Serialize};
 use std::error::Error;
 use url::Url;
 
@@ -15,40 +15,13 @@ pub struct OAuthClient<'a> {
     inner: BasicClient,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
-pub struct OpenIDProviderMetadata {
-    token_endpoint: String,
-
-    authorization_endpoint: String,
-}
-
 impl<'a> OAuthClient<'a> {
-    fn get_port(args: &Arguments) -> u16 {
-        match args.flow {
-            Flow::AuthorizationCodeWithPKCE { port } => port,
-            Flow::AuthorizationCode { port } => port,
-        }
-    }
-
-    async fn get_endpoints_from_discovery_url(
-        discovery_url: String,
-    ) -> Result<(String, String), Box<dyn Error>> {
-        let result = reqwest::get(discovery_url.to_owned())
-            .await
-            .expect("Couldn't reach out to provided `--discovery-url`")
-            .json::<OpenIDProviderMetadata>()
-            .await
-            .expect("Couldn't process json given by `--discovery-url`");
-
-        Ok((result.token_endpoint, result.authorization_endpoint))
-    }
-
     fn get_client(
         args: &Arguments,
         token_url: String,
         authorization_url: String,
     ) -> Result<BasicClient, Box<dyn Error>> {
-        let port = Self::get_port(args);
+        let port = args.port;
 
         Ok(BasicClient::new(
             ClientId::new(args.client_id.to_owned()),
@@ -61,27 +34,29 @@ impl<'a> OAuthClient<'a> {
 
     pub async fn new(args: &Arguments) -> Result<OAuthClient, Box<dyn Error>> {
         log::debug!("Creating OAuthClient...");
-        let client = if let Some(discovery_url) = args.discovery_url.to_owned() {
-            log::debug!(
-                "Using `--discovery-url`={} to get token_url and authorization_url ",
-                discovery_url
-            );
-            let (token_url, authorization_url) =
-                Self::get_endpoints_from_discovery_url(discovery_url).await?;
 
-            log::debug!(
-                "Resolved token_url={} and authorization_url={}",
-                token_url,
-                authorization_url
-            );
-            Self::get_client(args, token_url, authorization_url)
-        } else {
-            Self::get_client(
-                args,
-                args.token_url.to_owned().unwrap(),
-                args.authorization_url.to_owned().unwrap(),
-            )
-        }?;
+        let (token_url, authorization_url) =
+            if let Some(discovery_url) = args.discovery_url.to_owned() {
+                log::debug!(
+                    "Using `--discovery-url`={} to get token_url and authorization_url ",
+                    discovery_url
+                );
+
+                lib::openidc_discovery::get_endpoints_from_discovery_url(discovery_url).await?
+            } else {
+                (
+                    args.token_url.to_owned().unwrap(),
+                    args.authorization_url.to_owned().unwrap(),
+                )
+            };
+
+        log::debug!(
+            "Resolved token_url={} and authorization_url={}",
+            token_url,
+            authorization_url
+        );
+
+        let client = Self::get_client(args, token_url, authorization_url)?;
 
         log::debug!("OAuthClient created");
 
@@ -91,21 +66,75 @@ impl<'a> OAuthClient<'a> {
         })
     }
 
-    pub fn authorize_url(&self, pkce_challenge: Option<PkceCodeChallenge>) -> (Url, CsrfToken) {
+    fn authorization_url_builder(&self) -> AuthorizationRequest {
         let mut builder = self
             .inner
             .authorize_url(CsrfToken::new_random)
             .add_scope(Scope::new(self.args.scope.to_string()));
 
+        if let Some(ref aud) = self.args.audience {
+            builder = builder.add_extra_param("audience", aud);
+        }
+
+        builder
+    }
+
+    pub fn authorize_url(&self, pkce_challenge: Option<PkceCodeChallenge>) -> (Url, CsrfToken) {
+        let mut builder = self.authorization_url_builder();
+
         if let Some(challenge) = pkce_challenge {
             builder = builder.set_pkce_challenge(challenge);
         }
+
+        builder.url()
+    }
+
+    pub fn implicit_url(&self) -> (Url, CsrfToken) {
+        self.authorization_url_builder()
+            .add_extra_param("response_mode", "form_post")
+            .use_implicit_flow()
+            .url()
+    }
+
+    pub async fn exchange_client_credentials(&self) -> Result<BasicTokenResponse, Box<dyn Error>> {
+        log::debug!("Exchanging credentials for a token...");
+
+        // NOTE: offline_mode doesn't make any sense for Client Credentials.
+        // Replaces any usages for this scope even if provided by user
+        let scope = Scope::new(self.args.scope.to_string().replace("offline_access", ""));
+
+        let mut builder = self.inner.exchange_client_credentials().add_scope(scope);
 
         if let Some(aud) = &self.args.audience {
             builder = builder.add_extra_param("audience", aud);
         }
 
-        builder.url()
+        let token = builder.request_async(async_http_client).await?;
+        log::debug!("Exchange done");
+        Ok(token)
+    }
+
+    pub async fn exchange_resource_owner_password_client_credentials(
+        &self,
+    ) -> Result<BasicTokenResponse, Box<dyn Error>> {
+        log::debug!("Exchanging credentials for a token...");
+
+        let username =
+            &ResourceOwnerUsername::new(self.args.username.as_deref().unwrap().to_owned());
+        let password =
+            &ResourceOwnerPassword::new(self.args.password.as_deref().unwrap().to_owned());
+        let mut builder = self
+            .inner
+            .exchange_password(username, password)
+            .add_scope(Scope::new(self.args.scope.to_string()));
+
+        if let Some(aud) = &self.args.audience {
+            builder = builder.add_extra_param("audience", aud);
+        }
+
+        let token = builder.request_async(async_http_client).await?;
+        log::debug!("Exchange done");
+        Ok(token)
     }
 
     pub async fn exchange_code(
