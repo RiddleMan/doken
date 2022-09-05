@@ -71,7 +71,7 @@ impl<'a> OAuthClient<'a> {
             .authorize_url(CsrfToken::new_random)
             .add_scope(Scope::new(self.args.scope.to_string()));
 
-        if let Some(aud) = &self.args.audience {
+        if let Some(ref aud) = self.args.audience {
             builder = builder.add_extra_param("audience", aud);
         }
 
@@ -93,6 +93,24 @@ impl<'a> OAuthClient<'a> {
             .add_extra_param("response_mode", "form_post")
             .use_implicit_flow()
             .url()
+    }
+
+    pub async fn exchange_client_credentials(&self) -> Result<BasicTokenResponse, Box<dyn Error>> {
+        log::debug!("Exchanging credentials for a token...");
+
+        // NOTE: offline_mode doesn't make any sense for Client Credentials.
+        // Replaces any usages for this scope even if provided by user
+        let scope = Scope::new(self.args.scope.to_string().replace("offline_access", ""));
+
+        let mut builder = self.inner.exchange_client_credentials().add_scope(scope);
+
+        if let Some(aud) = &self.args.audience {
+            builder = builder.add_extra_param("audience", aud);
+        }
+
+        let token = builder.request_async(async_http_client).await?;
+        log::debug!("Exchange done");
+        Ok(token)
     }
 
     pub async fn exchange_code(
