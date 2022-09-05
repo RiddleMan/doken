@@ -1,5 +1,5 @@
 use crate::lib::args::Arguments;
-use crate::lib::server::get_token_data;
+use crate::lib::auth_server::AuthServer;
 use crate::lib::token_retriever::TokenRetriever;
 use crate::{lib, TokenInfo};
 use async_trait::async_trait;
@@ -64,6 +64,6 @@ impl<'a> TokenRetriever for ImplicitRetriever<'a> {
             panic!("Url couldn't be opened.")
         }
 
-        get_token_data(self.args.port).await
+        AuthServer::new(self.args.port).get_token_data().await
     }
 }

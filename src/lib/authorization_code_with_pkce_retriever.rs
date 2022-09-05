@@ -1,6 +1,6 @@
 use crate::lib::args::Arguments;
+use crate::lib::auth_server::AuthServer;
 use crate::lib::oauth_client::OAuthClient;
-use crate::lib::server::get_code;
 use crate::lib::token_retriever::TokenRetriever;
 use crate::TokenInfo;
 use async_trait::async_trait;
@@ -39,13 +39,11 @@ impl<'a> AuthorizationCodeWithPKCERetriever<'a> {
 #[async_trait(?Send)]
 impl<'a> TokenRetriever for AuthorizationCodeWithPKCERetriever<'a> {
     async fn retrieve(&self) -> Result<TokenInfo, Box<dyn std::error::Error>> {
-        let port = self.args.port;
-
         let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
 
         self.open_token_url(pkce_challenge)?;
 
-        let code = get_code(port).await?;
+        let code = AuthServer::new(self.args.port).get_code()?;
 
         let token = self
             .oauth_client

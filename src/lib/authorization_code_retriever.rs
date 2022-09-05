@@ -1,6 +1,6 @@
 use crate::lib::args::Arguments;
+use crate::lib::auth_server::AuthServer;
 use crate::lib::oauth_client::OAuthClient;
-use crate::lib::server::get_code;
 use crate::lib::token_retriever::TokenRetriever;
 use crate::TokenInfo;
 use async_trait::async_trait;
@@ -38,11 +38,9 @@ impl<'a> AuthorizationCodeRetriever<'a> {
 #[async_trait(?Send)]
 impl<'a> TokenRetriever for AuthorizationCodeRetriever<'a> {
     async fn retrieve(&self) -> Result<TokenInfo, Box<dyn std::error::Error>> {
-        let port = self.args.port;
-
         self.open_token_url()?;
 
-        let code = get_code(port).await?;
+        let code = AuthServer::new(self.args.port).get_code()?;
 
         let token = self.oauth_client.exchange_code(&code, None).await?;
 
