@@ -55,7 +55,7 @@ impl AuthServer {
         panic!("Cannot get token")
     }
 
-    pub async fn get_token_data(&self) -> Result<TokenInfo, Box<dyn Error>> {
+    pub fn get_token_data(&self) -> Result<TokenInfo, Box<dyn Error>> {
         for mut request in self.server.incoming_requests() {
             log::debug!("Request received");
 
