@@ -46,14 +46,14 @@ impl AuthServer {
         Ok(())
     }
 
-    pub async fn process_request<'a, TResponse, F>(
+    pub async fn process_request<TResponse, F>(
         &self,
         timeout: u64,
         f: F,
     ) -> Result<TResponse, Box<dyn Error>>
     where
         TResponse: Send + Clone + Sync + 'static,
-        F: Send + 'static + Fn(Request) -> Option<TResponse>,
+        F: Send + Fn(Request) -> Option<TResponse> + 'static,
     {
         let (tx_server, rx_server) = oneshot::channel();
         let (tx_sleep, rx_sleep) = oneshot::channel();
@@ -119,70 +119,47 @@ impl AuthServer {
     }
 
     pub async fn get_token_data(&self, timeout: u64) -> Result<TokenInfo, Box<dyn Error>> {
-        let (tx_server, rx_server) = oneshot::channel();
-        let (tx_sleep, rx_sleep) = oneshot::channel();
-        let mut body = String::new();
-        let server = self.server.clone();
+        self.process_request(timeout, |mut request| {
+            let mut body = String::new();
+            match request.method() {
+                Method::Post => {
+                    request.as_reader().read_to_string(&mut body).unwrap();
 
-        tokio::spawn(async move {
-            tokio::time::sleep(Duration::from_millis(timeout)).await;
+                    Self::response_with_default_message(request).unwrap();
 
-            let _ = tx_sleep.send("timeout");
-        });
+                    let form_params =
+                        form_urlencoded::parse(body.as_bytes())
+                            .collect::<Vec<(Cow<str>, Cow<str>)>>();
 
-        tokio::spawn(async move {
-            for mut request in server.incoming_requests() {
-                log::debug!("Request received");
-
-                match request.method() {
-                    Method::Post => {
-                        request.as_reader().read_to_string(&mut body).unwrap();
-
-                        Self::response_with_default_message(request).unwrap();
-
-                        let form_params =
-                            form_urlencoded::parse(body.as_bytes())
-                                .collect::<Vec<(Cow<str>, Cow<str>)>>();
-
-                        let _ = tx_server.send(TokenInfo {
-                            access_token: form_params
-                                .iter()
-                                .find(|(name, _value)| name == "access_token")
-                                .expect("Cannot find access_token in the HTTP Post request.")
-                                .1
-                                .to_string(),
-                            expires: Some(
-                                SystemTime::now().add(Duration::from_secs(
-                                    form_params
-                                        .iter()
-                                        .find(|(name, _value)| name == "expires_in")
-                                        .expect("Cannot find expires_in in the HTTP Post request.")
-                                        .1
-                                        .parse::<u64>()
-                                        .expect("expires_in is an incorrect number"),
-                                )),
-                            ),
-                            refresh_token: None,
-                            scope: None,
-                        });
-                        break;
-                    }
-                    _ => {
-                        log::debug!("Call to server without a code parameter. Ignoring...");
-                        println!("Ignoring");
-                    }
+                    Some(TokenInfo {
+                        access_token: form_params
+                            .iter()
+                            .find(|(name, _value)| name == "access_token")
+                            .expect("Cannot find access_token in the HTTP Post request.")
+                            .1
+                            .to_string(),
+                        expires: Some(
+                            SystemTime::now().add(Duration::from_secs(
+                                form_params
+                                    .iter()
+                                    .find(|(name, _value)| name == "expires_in")
+                                    .expect("Cannot find expires_in in the HTTP Post request.")
+                                    .1
+                                    .parse::<u64>()
+                                    .expect("expires_in is an incorrect number"),
+                            )),
+                        ),
+                        refresh_token: None,
+                        scope: None,
+                    })
+                }
+                _ => {
+                    log::debug!("Call to server without a code parameter. Ignoring...");
+                    println!("Ignoring");
+                    None
                 }
             }
-        });
-
-        tokio::select! {
-            _ = rx_sleep => {
-                self.server.unblock();
-                Err::<TokenInfo, Box<dyn Error>>(Box::new(TokenError {}))
-            }
-            Ok(token_info) = rx_server => {
-                Ok::<TokenInfo, Box<dyn Error>>(token_info)
-            }
-        }
+        })
+        .await
     }
 }
