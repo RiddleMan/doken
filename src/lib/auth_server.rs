@@ -46,29 +46,51 @@ impl AuthServer {
         Ok(())
     }
 
-    pub fn get_code(&self) -> Result<String, Box<dyn Error>> {
-        for request in self.server.incoming_requests() {
-            log::debug!("Request received");
-            let url = Url::parse(format!("http://localhost{}", request.url()).as_str()).unwrap();
-            let code = url.query_pairs().find(|qp| qp.0.eq("code"));
+    pub async fn get_code(&self, timeout: u64) -> Result<String, Box<dyn Error>> {
+        let (tx_server, rx_server) = oneshot::channel();
+        let (tx_sleep, rx_sleep) = oneshot::channel();
+        let server = self.server.clone();
 
-            match code {
-                Some(x) => {
-                    let code = x.1.to_string();
-                    log::debug!("Given code {}", code);
+        tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_millis(timeout)).await;
 
-                    Self::response_with_default_message(request)?;
+            let _ = tx_sleep.send("timeout");
+        });
 
-                    return Ok(code);
-                }
-                None => {
-                    log::debug!("Call to server without a code parameter. Ignoring...");
-                    println!("Ignoring");
+        tokio::spawn(async move {
+            for request in server.incoming_requests() {
+                log::debug!("Request received");
+                let url =
+                    Url::parse(format!("http://localhost{}", request.url()).as_str()).unwrap();
+                let code = url.query_pairs().find(|qp| qp.0.eq("code"));
+
+                match code {
+                    Some(x) => {
+                        let code = x.1.to_string();
+                        log::debug!("Given code {}", code);
+
+                        Self::response_with_default_message(request).unwrap();
+
+                        let _ = tx_server.send(code);
+                        break;
+                    }
+                    None => {
+                        log::debug!("Call to server without a code parameter. Ignoring...");
+                        println!("Ignoring");
+                    }
                 }
             }
-        }
+        });
 
-        panic!("Cannot get token")
+        tokio::select! {
+            _ = rx_sleep => {
+                self.server.unblock();
+                Err::<String, Box<dyn Error>>(Box::new(TokenError {}))
+            }
+            Ok(code) = rx_server => {
+                Ok::<String, Box<dyn Error>>(code)
+            }
+        }
     }
 
     pub async fn get_token_data(&self, timeout: u64) -> Result<TokenInfo, Box<dyn Error>> {
@@ -84,8 +106,6 @@ impl AuthServer {
         });
 
         tokio::spawn(async move {
-            log::info!("Waiting for connections...");
-
             let mut token_info = TokenInfo::new();
             for mut request in server.incoming_requests() {
                 log::debug!("Request received");

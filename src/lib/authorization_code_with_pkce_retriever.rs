@@ -43,7 +43,7 @@ impl<'a> TokenRetriever for AuthorizationCodeWithPKCERetriever<'a> {
 
         self.open_token_url(pkce_challenge)?;
 
-        let code = AuthServer::new(self.args.port).get_code()?;
+        let code = AuthServer::new(self.args.port).get_code(2_000).await?;
 
         let token = self
             .oauth_client
