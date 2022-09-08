@@ -5,7 +5,6 @@ use crate::lib::token_retriever::TokenRetriever;
 use crate::TokenInfo;
 use async_trait::async_trait;
 use oauth2::PkceCodeChallenge;
-use std::io;
 use std::process::Command;
 
 pub struct AuthorizationCodeWithPKCERetriever<'a> {
@@ -20,9 +19,14 @@ impl<'a> AuthorizationCodeWithPKCERetriever<'a> {
     ) -> AuthorizationCodeWithPKCERetriever<'b> {
         AuthorizationCodeWithPKCERetriever { oauth_client, args }
     }
+}
 
-    fn open_token_url(&self, pkce_challenge: PkceCodeChallenge) -> io::Result<()> {
-        let (url, _) = self.oauth_client.authorize_url(Some(pkce_challenge));
+#[async_trait(?Send)]
+impl<'a> TokenRetriever for AuthorizationCodeWithPKCERetriever<'a> {
+    async fn retrieve(&self) -> Result<TokenInfo, Box<dyn std::error::Error>> {
+        let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
+
+        let (url, csrf) = self.oauth_client.authorize_url(Some(pkce_challenge));
         log::debug!("Using `{}` url to initiate user session", url);
 
         log::debug!("Opening a browser...");
@@ -32,19 +36,8 @@ impl<'a> AuthorizationCodeWithPKCERetriever<'a> {
             panic!("Url couldn't be opened.")
         }
 
-        Ok(())
-    }
-}
-
-#[async_trait(?Send)]
-impl<'a> TokenRetriever for AuthorizationCodeWithPKCERetriever<'a> {
-    async fn retrieve(&self) -> Result<TokenInfo, Box<dyn std::error::Error>> {
-        let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
-
-        self.open_token_url(pkce_challenge)?;
-
         let code = AuthServer::new(self.args.port)
-            .get_code(self.args.timeout)
+            .get_code(self.args.timeout, csrf)
             .await?;
 
         let token = self

@@ -1,4 +1,5 @@
 use crate::TokenInfo;
+use oauth2::CsrfToken;
 use std::borrow::Cow;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
@@ -46,7 +47,7 @@ impl AuthServer {
         Ok(())
     }
 
-    pub async fn process_request<TResponse, F>(
+    async fn process_request<TResponse, F>(
         &self,
         timeout: u64,
         f: F,
@@ -76,7 +77,6 @@ impl AuthServer {
                     }
                     None => {
                         log::debug!("Unsupported request. Ignoring...");
-                        println!("Ignoring");
                     }
                 }
             }
@@ -93,23 +93,35 @@ impl AuthServer {
         }
     }
 
-    pub async fn get_code(&self, timeout: u64) -> Result<String, Box<dyn Error>> {
-        self.process_request(timeout, |request| {
+    pub async fn get_code(
+        &self,
+        timeout: u64,
+        csrf_token: CsrfToken,
+    ) -> Result<String, Box<dyn Error>> {
+        self.process_request(timeout, move |request| {
             let url = Url::parse(format!("http://localhost{}", request.url()).as_str()).unwrap();
+            let state = url.query_pairs().find(|qp| qp.0.eq("state"));
             let code = url.query_pairs().find(|qp| qp.0.eq("code"));
 
-            match code {
-                Some(x) => {
-                    let code = x.1.to_string();
-                    log::debug!("Given code {}", code);
+            match (state, code) {
+                (Some((_, state)), Some((_, code))) => {
+                    if state == *csrf_token.secret() {
+                        let code = code.to_string();
+                        log::debug!("Given code {}", code);
 
-                    Self::response_with_default_message(request).unwrap();
+                        Self::response_with_default_message(request).unwrap();
 
-                    Some(code)
+                        Some(code)
+                    } else {
+                        log::debug!("Incorrect CSRF token. Ignoring...");
+
+                        None
+                    }
                 }
-                None => {
-                    log::debug!("Call to server without a code parameter. Ignoring...");
-                    println!("Ignoring");
+                _ => {
+                    log::debug!(
+                        "Call to server without a state and/or a code parameter. Ignoring..."
+                    );
 
                     None
                 }
@@ -118,44 +130,62 @@ impl AuthServer {
         .await
     }
 
-    pub async fn get_token_data(&self, timeout: u64) -> Result<TokenInfo, Box<dyn Error>> {
-        self.process_request(timeout, |mut request| {
+    pub async fn get_token_data(
+        &self,
+        timeout: u64,
+        csrf_token: CsrfToken,
+    ) -> Result<TokenInfo, Box<dyn Error>> {
+        self.process_request(timeout, move |mut request| {
             let mut body = String::new();
             match request.method() {
                 Method::Post => {
                     request.as_reader().read_to_string(&mut body).unwrap();
 
-                    Self::response_with_default_message(request).unwrap();
-
                     let form_params =
                         form_urlencoded::parse(body.as_bytes())
                             .collect::<Vec<(Cow<str>, Cow<str>)>>();
 
-                    Some(TokenInfo {
-                        access_token: form_params
-                            .iter()
-                            .find(|(name, _value)| name == "access_token")
-                            .expect("Cannot find access_token in the HTTP Post request.")
-                            .1
-                            .to_string(),
-                        expires: Some(
-                            SystemTime::now().add(Duration::from_secs(
-                                form_params
-                                    .iter()
-                                    .find(|(name, _value)| name == "expires_in")
-                                    .expect("Cannot find expires_in in the HTTP Post request.")
-                                    .1
-                                    .parse::<u64>()
-                                    .expect("expires_in is an incorrect number"),
-                            )),
-                        ),
-                        refresh_token: None,
-                        scope: None,
-                    })
+                    let (_, access_token) = form_params
+                        .iter()
+                        .find(|(name, _value)| name == "access_token")
+                        .expect("Cannot find access_token in the HTTP Post request.");
+
+                    let (_, expires_in) = form_params
+                        .iter()
+                        .find(|(name, _value)| name == "expires_in")
+                        .expect("Cannot find expires_in in the HTTP Post request.");
+
+                    let (_, state) = form_params
+                        .iter()
+                        .find(|(name, _value)| name == "state")
+                        .expect("Cannot find state in the HTTP Post request.");
+
+                    if state == csrf_token.secret() {
+                        Self::response_with_default_message(request).unwrap();
+
+                        Some(TokenInfo {
+                            access_token: access_token.to_string(),
+                            expires: Some(
+                                SystemTime::now().add(Duration::from_secs(
+                                    expires_in
+                                        .parse::<u64>()
+                                        .expect("expires_in is an incorrect number"),
+                                )),
+                            ),
+                            refresh_token: None,
+                            scope: None,
+                        })
+                    } else {
+                        log::debug!("Incorrect CSRF token. Ignoring...");
+
+                        None
+                    }
                 }
                 _ => {
-                    log::debug!("Call to server without a code parameter. Ignoring...");
-                    println!("Ignoring");
+                    log::debug!(
+                        "Call to server without a state and/or a code parameter. Ignoring..."
+                    );
+
                     None
                 }
             }

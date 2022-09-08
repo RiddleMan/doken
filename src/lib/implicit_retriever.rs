@@ -23,7 +23,7 @@ impl<'a> ImplicitRetriever<'a> {
 #[async_trait(?Send)]
 impl<'a> TokenRetriever for ImplicitRetriever<'a> {
     async fn retrieve(&self) -> Result<TokenInfo, Box<dyn Error>> {
-        let (url, _) = self.oauth_client.implicit_url();
+        let (url, csrf) = self.oauth_client.implicit_url();
 
         log::debug!("Opening a browser...");
         let status = Command::new("open").arg(url.as_str()).status()?;
@@ -33,7 +33,7 @@ impl<'a> TokenRetriever for ImplicitRetriever<'a> {
         }
 
         AuthServer::new(self.args.port)
-            .get_token_data(self.args.timeout)
+            .get_token_data(self.args.timeout, csrf)
             .await
     }
 }
