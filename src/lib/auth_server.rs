@@ -1,14 +1,28 @@
 use crate::TokenInfo;
 use std::borrow::Cow;
 use std::error::Error;
+use std::fmt::{Display, Formatter};
 use std::ops::Add;
 use std::str::FromStr;
+use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 use tiny_http::{Header, Method, Request, Response, Server as TinyServer};
+use tokio::sync::oneshot;
 use url::Url;
 
+#[derive(Debug)]
+struct Timeout {}
+
+impl Display for Timeout {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "No requests with required data. Timeout.")
+    }
+}
+
+impl Error for Timeout {}
+
 pub struct AuthServer {
-    server: TinyServer,
+    server: Arc<TinyServer>,
 }
 
 impl AuthServer {
@@ -17,7 +31,9 @@ impl AuthServer {
         let server = TinyServer::http(format!("127.0.0.1:{}", port)).unwrap();
 
         log::info!("Waiting for connections...");
-        AuthServer { server }
+        AuthServer {
+            server: Arc::new(server),
+        }
     }
 
     fn response_with_default_message(request: Request) -> Result<(), Box<dyn Error>> {
@@ -30,9 +46,55 @@ impl AuthServer {
         Ok(())
     }
 
-    pub fn get_code(&self) -> Result<String, Box<dyn Error>> {
-        for request in self.server.incoming_requests() {
-            log::debug!("Request received");
+    pub async fn process_request<TResponse, F>(
+        &self,
+        timeout: u64,
+        f: F,
+    ) -> Result<TResponse, Box<dyn Error>>
+    where
+        TResponse: Send + Clone + Sync + 'static,
+        F: Send + Fn(Request) -> Option<TResponse> + 'static,
+    {
+        let (tx_server, rx_server) = oneshot::channel();
+        let (tx_sleep, rx_sleep) = oneshot::channel();
+        let server = self.server.clone();
+
+        tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_millis(timeout)).await;
+
+            let _ = tx_sleep.send("timeout");
+        });
+
+        tokio::spawn(async move {
+            for request in server.incoming_requests() {
+                log::debug!("Request received");
+
+                match f(request) {
+                    Some(response) => {
+                        let _ = tx_server.send(response);
+                        break;
+                    }
+                    None => {
+                        log::debug!("Unsupported request. Ignoring...");
+                        println!("Ignoring");
+                    }
+                }
+            }
+        });
+
+        tokio::select! {
+            _ = rx_sleep => {
+                self.server.unblock();
+                Err::<TResponse, Box<dyn Error>>(Box::new(Timeout {}))
+            }
+            Ok(response) = rx_server => {
+                Ok::<TResponse, Box<dyn Error>>(response)
+            }
+        }
+    }
+
+    pub async fn get_code(&self, timeout: u64) -> Result<String, Box<dyn Error>> {
+        self.process_request(timeout, |request| {
             let url = Url::parse(format!("http://localhost{}", request.url()).as_str()).unwrap();
             let code = url.query_pairs().find(|qp| qp.0.eq("code"));
 
@@ -41,46 +103,44 @@ impl AuthServer {
                     let code = x.1.to_string();
                     log::debug!("Given code {}", code);
 
-                    Self::response_with_default_message(request)?;
+                    Self::response_with_default_message(request).unwrap();
 
-                    return Ok(code);
+                    Some(code)
                 }
                 None => {
                     log::debug!("Call to server without a code parameter. Ignoring...");
                     println!("Ignoring");
+
+                    None
                 }
             }
-        }
-
-        panic!("Cannot get token")
+        })
+        .await
     }
 
-    pub async fn get_token_data(&self) -> Result<TokenInfo, Box<dyn Error>> {
-        for mut request in self.server.incoming_requests() {
-            log::debug!("Request received");
-
+    pub async fn get_token_data(&self, timeout: u64) -> Result<TokenInfo, Box<dyn Error>> {
+        self.process_request(timeout, |mut request| {
+            let mut body = String::new();
             match request.method() {
                 Method::Post => {
-                    let mut body = String::new();
-                    request.as_reader().read_to_string(&mut body)?;
+                    request.as_reader().read_to_string(&mut body).unwrap();
 
-                    let form_fields =
+                    Self::response_with_default_message(request).unwrap();
+
+                    let form_params =
                         form_urlencoded::parse(body.as_bytes())
                             .collect::<Vec<(Cow<str>, Cow<str>)>>();
 
-                    Self::response_with_default_message(request)?;
-
-                    return Ok(TokenInfo {
-                        access_token: form_fields
+                    Some(TokenInfo {
+                        access_token: form_params
                             .iter()
                             .find(|(name, _value)| name == "access_token")
                             .expect("Cannot find access_token in the HTTP Post request.")
                             .1
                             .to_string(),
-                        refresh_token: None,
                         expires: Some(
                             SystemTime::now().add(Duration::from_secs(
-                                form_fields
+                                form_params
                                     .iter()
                                     .find(|(name, _value)| name == "expires_in")
                                     .expect("Cannot find expires_in in the HTTP Post request.")
@@ -89,16 +149,17 @@ impl AuthServer {
                                     .expect("expires_in is an incorrect number"),
                             )),
                         ),
+                        refresh_token: None,
                         scope: None,
-                    });
+                    })
                 }
                 _ => {
                     log::debug!("Call to server without a code parameter. Ignoring...");
                     println!("Ignoring");
+                    None
                 }
             }
-        }
-
-        panic!("Cannot get token")
+        })
+        .await
     }
 }

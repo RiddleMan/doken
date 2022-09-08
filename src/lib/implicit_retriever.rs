@@ -32,6 +32,8 @@ impl<'a> TokenRetriever for ImplicitRetriever<'a> {
             panic!("Url couldn't be opened.")
         }
 
-        AuthServer::new(self.args.port).get_token_data().await
+        AuthServer::new(self.args.port)
+            .get_token_data(self.args.timeout)
+            .await
     }
 }

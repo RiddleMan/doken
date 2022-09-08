@@ -40,7 +40,9 @@ impl<'a> TokenRetriever for AuthorizationCodeRetriever<'a> {
     async fn retrieve(&self) -> Result<TokenInfo, Box<dyn std::error::Error>> {
         self.open_token_url()?;
 
-        let code = AuthServer::new(self.args.port).get_code()?;
+        let code = AuthServer::new(self.args.port)
+            .get_code(self.args.timeout)
+            .await?;
 
         let token = self.oauth_client.exchange_code(&code, None).await?;
 
