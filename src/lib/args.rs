@@ -88,6 +88,10 @@ pub struct Arguments {
     #[clap(long, env = "DOKEN_AUDIENCE")]
     pub audience: Option<String>,
 
+    /// Authorization Code, Authorization Code with PKCE and Implicit Grants' timeout,
+    #[clap(short, long, default_value_t = 30_000, env = "DOKEN_TIMEOUT")]
+    pub timeout: u64,
+
     /// When turned on ignores the state file and continues with a fresh flow
     #[clap(short, long, action, default_value_t = false)]
     pub force: bool,
