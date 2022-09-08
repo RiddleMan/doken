@@ -4,7 +4,6 @@ use crate::lib::oauth_client::OAuthClient;
 use crate::lib::token_retriever::TokenRetriever;
 use crate::TokenInfo;
 use async_trait::async_trait;
-use std::io;
 use std::process::Command;
 
 pub struct AuthorizationCodeRetriever<'a> {
@@ -19,9 +18,12 @@ impl<'a> AuthorizationCodeRetriever<'a> {
     ) -> AuthorizationCodeRetriever<'b> {
         AuthorizationCodeRetriever { oauth_client, args }
     }
+}
 
-    fn open_token_url(&self) -> io::Result<()> {
-        let (url, _) = self.oauth_client.authorize_url(None);
+#[async_trait(?Send)]
+impl<'a> TokenRetriever for AuthorizationCodeRetriever<'a> {
+    async fn retrieve(&self) -> Result<TokenInfo, Box<dyn std::error::Error>> {
+        let (url, csrf) = self.oauth_client.authorize_url(None);
         log::debug!("Using `{}` url to initiate user session", url);
 
         log::debug!("Opening a browser...");
@@ -31,17 +33,8 @@ impl<'a> AuthorizationCodeRetriever<'a> {
             panic!("Url couldn't be opened.")
         }
 
-        Ok(())
-    }
-}
-
-#[async_trait(?Send)]
-impl<'a> TokenRetriever for AuthorizationCodeRetriever<'a> {
-    async fn retrieve(&self) -> Result<TokenInfo, Box<dyn std::error::Error>> {
-        self.open_token_url()?;
-
         let code = AuthServer::new(self.args.port)
-            .get_code(self.args.timeout)
+            .get_code(self.args.timeout, csrf)
             .await?;
 
         let token = self.oauth_client.exchange_code(&code, None).await?;
