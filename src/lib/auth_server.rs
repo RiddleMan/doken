@@ -46,7 +46,15 @@ impl AuthServer {
         Ok(())
     }
 
-    pub async fn get_code(&self, timeout: u64) -> Result<String, Box<dyn Error>> {
+    pub async fn process_request<'a, TResponse, F>(
+        &self,
+        timeout: u64,
+        f: F,
+    ) -> Result<TResponse, Box<dyn Error>>
+    where
+        TResponse: Send + Clone + Sync + 'static,
+        F: Send + 'static + Fn(Request) -> Option<TResponse>,
+    {
         let (tx_server, rx_server) = oneshot::channel();
         let (tx_sleep, rx_sleep) = oneshot::channel();
         let server = self.server.clone();
@@ -60,22 +68,14 @@ impl AuthServer {
         tokio::spawn(async move {
             for request in server.incoming_requests() {
                 log::debug!("Request received");
-                let url =
-                    Url::parse(format!("http://localhost{}", request.url()).as_str()).unwrap();
-                let code = url.query_pairs().find(|qp| qp.0.eq("code"));
 
-                match code {
-                    Some(x) => {
-                        let code = x.1.to_string();
-                        log::debug!("Given code {}", code);
-
-                        Self::response_with_default_message(request).unwrap();
-
-                        let _ = tx_server.send(code);
+                match f(request) {
+                    Some(response) => {
+                        let _ = tx_server.send(response);
                         break;
                     }
                     None => {
-                        log::debug!("Call to server without a code parameter. Ignoring...");
+                        log::debug!("Unsupported request. Ignoring...");
                         println!("Ignoring");
                     }
                 }
@@ -85,12 +85,37 @@ impl AuthServer {
         tokio::select! {
             _ = rx_sleep => {
                 self.server.unblock();
-                Err::<String, Box<dyn Error>>(Box::new(TokenError {}))
+                Err::<TResponse, Box<dyn Error>>(Box::new(TokenError {}))
             }
-            Ok(code) = rx_server => {
-                Ok::<String, Box<dyn Error>>(code)
+            Ok(response) = rx_server => {
+                Ok::<TResponse, Box<dyn Error>>(response)
             }
         }
+    }
+
+    pub async fn get_code(&self, timeout: u64) -> Result<String, Box<dyn Error>> {
+        self.process_request(timeout, |request| {
+            let url = Url::parse(format!("http://localhost{}", request.url()).as_str()).unwrap();
+            let code = url.query_pairs().find(|qp| qp.0.eq("code"));
+
+            match code {
+                Some(x) => {
+                    let code = x.1.to_string();
+                    log::debug!("Given code {}", code);
+
+                    Self::response_with_default_message(request).unwrap();
+
+                    Some(code)
+                }
+                None => {
+                    log::debug!("Call to server without a code parameter. Ignoring...");
+                    println!("Ignoring");
+
+                    None
+                }
+            }
+        })
+        .await
     }
 
     pub async fn get_token_data(&self, timeout: u64) -> Result<TokenInfo, Box<dyn Error>> {
