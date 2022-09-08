@@ -11,15 +11,15 @@ use tokio::sync::oneshot;
 use url::Url;
 
 #[derive(Debug)]
-struct TokenError {}
+struct Timeout {}
 
-impl Display for TokenError {
+impl Display for Timeout {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Can't get a token")
+        write!(f, "No requests with required data. Timeout.")
     }
 }
 
-impl Error for TokenError {}
+impl Error for Timeout {}
 
 pub struct AuthServer {
     server: Arc<TinyServer>,
@@ -85,7 +85,7 @@ impl AuthServer {
         tokio::select! {
             _ = rx_sleep => {
                 self.server.unblock();
-                Err::<TResponse, Box<dyn Error>>(Box::new(TokenError {}))
+                Err::<TResponse, Box<dyn Error>>(Box::new(Timeout {}))
             }
             Ok(response) = rx_server => {
                 Ok::<TResponse, Box<dyn Error>>(response)
