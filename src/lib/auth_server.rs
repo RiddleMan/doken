@@ -106,7 +106,6 @@ impl AuthServer {
         });
 
         tokio::spawn(async move {
-            let mut token_info = TokenInfo::new();
             for mut request in server.incoming_requests() {
                 log::debug!("Request received");
 
@@ -120,24 +119,27 @@ impl AuthServer {
                             form_urlencoded::parse(body.as_bytes())
                                 .collect::<Vec<(Cow<str>, Cow<str>)>>();
 
-                        token_info.access_token = form_params
-                            .iter()
-                            .find(|(name, _value)| name == "access_token")
-                            .expect("Cannot find access_token in the HTTP Post request.")
-                            .1
-                            .to_string();
-
-                        token_info.expires = Some(
-                            SystemTime::now().add(Duration::from_secs(
-                                form_params
-                                    .iter()
-                                    .find(|(name, _value)| name == "expires_in")
-                                    .expect("Cannot find expires_in in the HTTP Post request.")
-                                    .1
-                                    .parse::<u64>()
-                                    .expect("expires_in is an incorrect number"),
-                            )),
-                        );
+                        let _ = tx_server.send(TokenInfo {
+                            access_token: form_params
+                                .iter()
+                                .find(|(name, _value)| name == "access_token")
+                                .expect("Cannot find access_token in the HTTP Post request.")
+                                .1
+                                .to_string(),
+                            expires: Some(
+                                SystemTime::now().add(Duration::from_secs(
+                                    form_params
+                                        .iter()
+                                        .find(|(name, _value)| name == "expires_in")
+                                        .expect("Cannot find expires_in in the HTTP Post request.")
+                                        .1
+                                        .parse::<u64>()
+                                        .expect("expires_in is an incorrect number"),
+                                )),
+                            ),
+                            refresh_token: None,
+                            scope: None,
+                        });
                         break;
                     }
                     _ => {
@@ -146,8 +148,6 @@ impl AuthServer {
                     }
                 }
             }
-
-            let _ = tx_server.send(token_info);
         });
 
         tokio::select! {
