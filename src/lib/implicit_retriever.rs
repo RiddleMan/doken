@@ -25,12 +25,12 @@ impl<'a> TokenRetriever for ImplicitRetriever<'a> {
     async fn retrieve(&self) -> Result<TokenInfo, Box<dyn Error>> {
         let (url, _) = self.oauth_client.implicit_url();
 
-        // log::debug!("Opening a browser...");
-        // let status = Command::new("open").arg(url.as_str()).status()?;
-        //
-        // if !status.success() {
-        //     panic!("Url couldn't be opened.")
-        // }
+        log::debug!("Opening a browser...");
+        let status = Command::new("open").arg(url.as_str()).status()?;
+
+        if !status.success() {
+            panic!("Url couldn't be opened.")
+        }
 
         AuthServer::new(self.args.port).get_token_data(2_000).await
     }

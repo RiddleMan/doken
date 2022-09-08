@@ -87,50 +87,43 @@ impl AuthServer {
             log::info!("Waiting for connections...");
 
             let mut token_info = TokenInfo::new();
-            loop {
-                let request = server.try_recv().unwrap();
-
-                if tx_server.is_closed() {
-                    break;
-                }
+            for mut request in server.incoming_requests() {
                 log::debug!("Request received");
 
-                match request {
-                    Some(mut request) => match request.method() {
-                        Method::Post => {
-                            request.as_reader().read_to_string(&mut body).unwrap();
+                match request.method() {
+                    Method::Post => {
+                        request.as_reader().read_to_string(&mut body).unwrap();
 
-                            Self::response_with_default_message(request).unwrap();
+                        Self::response_with_default_message(request).unwrap();
 
-                            let form_params = form_urlencoded::parse(body.as_bytes())
+                        let form_params =
+                            form_urlencoded::parse(body.as_bytes())
                                 .collect::<Vec<(Cow<str>, Cow<str>)>>();
 
-                            token_info.access_token = form_params
-                                .iter()
-                                .find(|(name, _value)| name == "access_token")
-                                .expect("Cannot find access_token in the HTTP Post request.")
-                                .1
-                                .to_string();
+                        token_info.access_token = form_params
+                            .iter()
+                            .find(|(name, _value)| name == "access_token")
+                            .expect("Cannot find access_token in the HTTP Post request.")
+                            .1
+                            .to_string();
 
-                            token_info.expires = Some(
-                                SystemTime::now().add(Duration::from_secs(
-                                    form_params
-                                        .iter()
-                                        .find(|(name, _value)| name == "expires_in")
-                                        .expect("Cannot find expires_in in the HTTP Post request.")
-                                        .1
-                                        .parse::<u64>()
-                                        .expect("expires_in is an incorrect number"),
-                                )),
-                            );
-                            break;
-                        }
-                        _ => {
-                            log::debug!("Call to server without a code parameter. Ignoring...");
-                            println!("Ignoring");
-                        }
-                    },
-                    None => {}
+                        token_info.expires = Some(
+                            SystemTime::now().add(Duration::from_secs(
+                                form_params
+                                    .iter()
+                                    .find(|(name, _value)| name == "expires_in")
+                                    .expect("Cannot find expires_in in the HTTP Post request.")
+                                    .1
+                                    .parse::<u64>()
+                                    .expect("expires_in is an incorrect number"),
+                            )),
+                        );
+                        break;
+                    }
+                    _ => {
+                        log::debug!("Call to server without a code parameter. Ignoring...");
+                        println!("Ignoring");
+                    }
                 }
             }
 
@@ -139,6 +132,7 @@ impl AuthServer {
 
         tokio::select! {
             _ = rx_sleep => {
+                self.server.unblock();
                 Err::<TokenInfo, Box<dyn Error>>(Box::new(TokenError {}))
             }
             Ok(token_info) = rx_server => {
