@@ -16,6 +16,15 @@ pub struct TokenInfo {
 }
 
 impl TokenInfo {
+    pub fn new() -> TokenInfo {
+        TokenInfo {
+            scope: None,
+            expires: None,
+            refresh_token: None,
+            access_token: String::new(),
+        }
+    }
+
     pub fn from_token_response(response: BasicTokenResponse) -> TokenInfo {
         TokenInfo {
             access_token: response.access_token().secret().to_owned(),
