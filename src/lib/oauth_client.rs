@@ -70,6 +70,8 @@ impl<'a> OAuthClient<'a> {
         let mut builder = self
             .inner
             .authorize_url(CsrfToken::new_random)
+            // TODO: Generate cryptographic strong NONCE
+            .add_extra_param("nonce", "NONCE")
             .add_scope(Scope::new(self.args.scope.to_string()));
 
         if let Some(ref aud) = self.args.audience {

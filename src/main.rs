@@ -1,3 +1,4 @@
+use crate::lib::args::Args;
 use crate::lib::args::Grant;
 use crate::lib::authorization_code_retriever::AuthorizationCodeRetriever;
 use crate::lib::authorization_code_with_pkce_retriever::AuthorizationCodeWithPKCERetriever;
@@ -27,7 +28,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     enable_debug_via_args();
     env_logger::init();
 
-    let args = lib::args::Args::parse()?;
+    let args = Args::parse()?;
 
     let file_state = FileState::new();
     let oauth_client = OAuthClient::new(&args).await?;

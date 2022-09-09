@@ -26,7 +26,7 @@ impl<'a> TokenRetriever for AuthorizationCodeRetriever<'a> {
         let (url, csrf) = self.oauth_client.authorize_url(None);
         log::debug!("Using `{}` url to initiate user session", url);
 
-        log::debug!("Opening a browser...");
+        log::debug!("Opening a browser with {url} ...");
         let status = Command::new("open").arg(url.as_str()).status()?;
 
         if !status.success() {
