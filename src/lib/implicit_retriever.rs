@@ -25,7 +25,7 @@ impl<'a> TokenRetriever for ImplicitRetriever<'a> {
     async fn retrieve(&self) -> Result<TokenInfo, Box<dyn Error>> {
         let (url, csrf) = self.oauth_client.implicit_url();
 
-        log::debug!("Opening a browser...");
+        log::debug!("Opening a browser with {url} ...");
         let status = Command::new("open").arg(url.as_str()).status()?;
 
         if !status.success() {

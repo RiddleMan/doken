@@ -1,11 +1,11 @@
 use crate::lib;
-use crate::lib::args::Arguments;
+use crate::lib::args::{Arguments, TokenType};
 use oauth2::basic::{BasicClient, BasicTokenResponse};
 use oauth2::reqwest::async_http_client;
 use oauth2::{
     AuthUrl, AuthorizationCode, AuthorizationRequest, ClientId, ClientSecret, CsrfToken,
     PkceCodeChallenge, PkceCodeVerifier, RedirectUrl, RefreshToken, ResourceOwnerPassword,
-    ResourceOwnerUsername, Scope, TokenUrl,
+    ResourceOwnerUsername, ResponseType, Scope, TokenUrl,
 };
 use std::error::Error;
 use url::Url;
@@ -70,6 +70,8 @@ impl<'a> OAuthClient<'a> {
         let mut builder = self
             .inner
             .authorize_url(CsrfToken::new_random)
+            // TODO: Generate cryptographic strong NONCE
+            .add_extra_param("nonce", "NONCE")
             .add_scope(Scope::new(self.args.scope.to_string()));
 
         if let Some(ref aud) = self.args.audience {
@@ -91,8 +93,12 @@ impl<'a> OAuthClient<'a> {
 
     pub fn implicit_url(&self) -> (Url, CsrfToken) {
         self.authorization_url_builder()
+            .set_response_type(&if matches!(self.args.token_type, TokenType::IdToken) {
+                ResponseType::new("id_token token".to_string())
+            } else {
+                ResponseType::new("token".to_string())
+            })
             .add_extra_param("response_mode", "form_post")
-            .use_implicit_flow()
             .url()
     }
 

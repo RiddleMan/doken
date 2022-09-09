@@ -1,4 +1,5 @@
 use crate::lib::args::Grant;
+use crate::lib::args::{Args, TokenType};
 use crate::lib::authorization_code_retriever::AuthorizationCodeRetriever;
 use crate::lib::authorization_code_with_pkce_retriever::AuthorizationCodeWithPKCERetriever;
 use crate::lib::client_credentials_retriever::ClientCredentialsRetriever;
@@ -27,7 +28,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     enable_debug_via_args();
     env_logger::init();
 
-    let args = lib::args::Args::parse()?;
+    let args = Args::parse()?;
 
     let file_state = FileState::new();
     let oauth_client = OAuthClient::new(&args).await?;
@@ -63,6 +64,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .upsert_token_info(args.client_id.to_owned(), token_info.to_owned())
         .await?;
 
-    println!("{}", token_info.access_token);
+    println!(
+        "{}",
+        if matches!(args.token_type, TokenType::IdToken) {
+            token_info
+                .id_token
+                .expect("ID Token wasn't provided by Identity Provider")
+        } else {
+            token_info.access_token
+        }
+    );
     exit(0);
 }

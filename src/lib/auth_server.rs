@@ -150,6 +150,11 @@ impl AuthServer {
                         .find(|(name, _value)| name == "access_token")
                         .expect("Cannot find access_token in the HTTP Post request.");
 
+                    let id_token = form_params
+                        .iter()
+                        .find(|(name, _value)| name == "id_token")
+                        .map(|(_, token)| token.to_string());
+
                     let (_, expires_in) = form_params
                         .iter()
                         .find(|(name, _value)| name == "expires_in")
@@ -165,6 +170,8 @@ impl AuthServer {
 
                         Some(TokenInfo {
                             access_token: access_token.to_string(),
+                            refresh_token: None,
+                            id_token,
                             expires: Some(
                                 SystemTime::now().add(Duration::from_secs(
                                     expires_in
@@ -172,7 +179,6 @@ impl AuthServer {
                                         .expect("expires_in is an incorrect number"),
                                 )),
                             ),
-                            refresh_token: None,
                             scope: None,
                         })
                     } else {
