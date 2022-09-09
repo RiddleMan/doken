@@ -1,11 +1,11 @@
 use crate::lib;
-use crate::lib::args::{Arguments, TokenType};
+use crate::lib::args::Arguments;
 use oauth2::basic::{BasicClient, BasicTokenResponse};
 use oauth2::reqwest::async_http_client;
 use oauth2::{
     AuthUrl, AuthorizationCode, AuthorizationRequest, ClientId, ClientSecret, CsrfToken,
     PkceCodeChallenge, PkceCodeVerifier, RedirectUrl, RefreshToken, ResourceOwnerPassword,
-    ResourceOwnerUsername, ResponseType, Scope, TokenUrl,
+    ResourceOwnerUsername, Scope, TokenUrl,
 };
 use std::error::Error;
 use url::Url;

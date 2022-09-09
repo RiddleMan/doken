@@ -1,5 +1,5 @@
+use crate::lib::args::Args;
 use crate::lib::args::Grant;
-use crate::lib::args::{Args, TokenType};
 use crate::lib::authorization_code_retriever::AuthorizationCodeRetriever;
 use crate::lib::authorization_code_with_pkce_retriever::AuthorizationCodeWithPKCERetriever;
 use crate::lib::client_credentials_retriever::ClientCredentialsRetriever;
