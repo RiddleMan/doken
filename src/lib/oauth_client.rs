@@ -93,12 +93,8 @@ impl<'a> OAuthClient<'a> {
 
     pub fn implicit_url(&self) -> (Url, CsrfToken) {
         self.authorization_url_builder()
-            .set_response_type(&if matches!(self.args.token_type, TokenType::IdToken) {
-                ResponseType::new("id_token token".to_string())
-            } else {
-                ResponseType::new("token".to_string())
-            })
             .add_extra_param("response_mode", "form_post")
+            .use_implicit_flow()
             .url()
     }
 

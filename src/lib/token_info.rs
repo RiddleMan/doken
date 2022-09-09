@@ -10,8 +10,6 @@ pub struct TokenInfo {
 
     pub refresh_token: Option<String>,
 
-    pub id_token: Option<String>,
-
     pub expires: Option<SystemTime>,
 
     pub scope: Option<String>,
@@ -24,7 +22,6 @@ impl TokenInfo {
             refresh_token: response
                 .refresh_token()
                 .map(|token| token.secret().to_owned()),
-            id_token: None,
             expires: response
                 .expires_in()
                 .map(|duration| SystemTime::now().add(duration)),

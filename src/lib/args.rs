@@ -16,12 +16,6 @@ pub enum Grant {
     ClientCredentials,
 }
 
-#[derive(ArgEnum, Clone, Debug)]
-pub enum TokenType {
-    IdToken,
-    AccessToken,
-}
-
 #[derive(Parser, Debug)]
 #[clap(author, version, about)]
 #[clap(group(
@@ -99,10 +93,6 @@ pub struct Arguments {
     /// Add diagnostics info
     #[clap(short, long, action, default_value_t = false)]
     pub debug: bool,
-
-    /// Token type: OpenID Connect ID Token or OAuth 2.0 Access Token
-    #[clap(long, arg_enum, default_value_t = TokenType::AccessToken, env = "DOKEN_TOKEN_TYPE")]
-    pub token_type: TokenType,
 }
 
 pub struct Args;

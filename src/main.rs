@@ -64,15 +64,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .upsert_token_info(args.client_id.to_owned(), token_info.to_owned())
         .await?;
 
-    println!(
-        "{}",
-        if matches!(args.token_type, TokenType::IdToken) {
-            token_info
-                .id_token
-                .expect("ID Token wasn't provided by Identity Provider")
-        } else {
-            token_info.access_token
-        }
-    );
+    println!("{}", token_info.access_token);
     exit(0);
 }
