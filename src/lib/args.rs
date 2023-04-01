@@ -1,8 +1,9 @@
-use clap::{ArgEnum, ArgGroup, Command, CommandFactory, ErrorKind, Parser};
+use clap::error::ErrorKind;
+use clap::{ArgGroup, Command, CommandFactory, Parser, ValueEnum};
 use dotenv::dotenv;
 use std::error::Error;
 
-#[derive(ArgEnum, Clone, Debug)]
+#[derive(ValueEnum, Clone, Debug)]
 pub enum Grant {
     /// Authorization code with PKCE Grant. More: https://www.rfc-editor.org/rfc/rfc7636
     AuthorizationCodeWithPKCE,
@@ -21,17 +22,17 @@ pub enum Grant {
 #[clap(group(
     ArgGroup::new("oauth2")
         .multiple(true)
-        .args(&["token-url", "authorization-url"])
+        .args(["token_url", "authorization_url"])
         .conflicts_with("oidc")
 ))]
 #[clap(group(
     ArgGroup::new("oidc")
-        .arg("discovery-url")
+        .arg("discovery_url")
         .conflicts_with("oauth2")
 ))]
 pub struct Arguments {
     /// Authentication Grant
-    #[clap(long, arg_enum, default_value_t = Grant::AuthorizationCodeWithPKCE, env = "DOKEN_GRANT")]
+    #[clap(long, value_enum, default_value_t = Grant::AuthorizationCodeWithPKCE, env = "DOKEN_GRANT")]
     pub grant: Grant,
 
     /// OAuth 2.0 token exchange url
