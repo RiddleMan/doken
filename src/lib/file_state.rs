@@ -1,4 +1,5 @@
 use crate::lib::token_info::TokenInfo;
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -42,7 +43,7 @@ impl FileState {
         serde_json::from_str::<DokenState>(&text).unwrap_or(DokenState { version: 1, data })
     }
 
-    async fn write(&self, state: &DokenState) -> Result<(), Box<dyn std::error::Error>> {
+    async fn write(&self, state: &DokenState) -> Result<()> {
         log::debug!("Writing the state file");
         let state_str = serde_json::to_string(state).unwrap();
 
@@ -61,11 +62,7 @@ impl FileState {
         state.data.get(client_id).cloned()
     }
 
-    pub async fn upsert_token_info(
-        &self,
-        client_id: String,
-        token_info: TokenInfo,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn upsert_token_info(&self, client_id: String, token_info: TokenInfo) -> Result<()> {
         log::debug!(
             "Saving token info: {:#?} for client_id: {} to the state",
             token_info,
@@ -80,10 +77,7 @@ impl FileState {
         Ok(())
     }
 
-    pub async fn clear_token_info(
-        &self,
-        client_id: String,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn clear_token_info(&self, client_id: String) -> Result<()> {
         log::debug!(
             "Clearing token info for client_id: {} in the state",
             client_id

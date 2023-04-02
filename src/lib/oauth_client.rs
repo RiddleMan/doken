@@ -1,5 +1,6 @@
 use crate::lib;
 use crate::lib::args::Arguments;
+use anyhow::Result;
 use oauth2::basic::{BasicClient, BasicTokenResponse};
 use oauth2::reqwest::async_http_client;
 use oauth2::{
@@ -7,7 +8,6 @@ use oauth2::{
     PkceCodeChallenge, PkceCodeVerifier, RedirectUrl, RefreshToken, ResourceOwnerPassword,
     ResourceOwnerUsername, Scope, TokenUrl,
 };
-use std::error::Error;
 use url::Url;
 
 pub struct OAuthClient<'a> {
@@ -20,7 +20,7 @@ impl<'a> OAuthClient<'a> {
         args: &Arguments,
         token_url: String,
         authorization_url: String,
-    ) -> Result<BasicClient, Box<dyn Error>> {
+    ) -> Result<BasicClient> {
         let port = args.port;
 
         Ok(BasicClient::new(
@@ -32,7 +32,7 @@ impl<'a> OAuthClient<'a> {
         .set_redirect_uri(RedirectUrl::new(format!("http://localhost:{}", port)).unwrap()))
     }
 
-    pub async fn new(args: &Arguments) -> Result<OAuthClient, Box<dyn Error>> {
+    pub async fn new(args: &Arguments) -> Result<OAuthClient> {
         log::debug!("Creating OAuthClient...");
 
         let (token_url, authorization_url) =
@@ -98,7 +98,7 @@ impl<'a> OAuthClient<'a> {
             .url()
     }
 
-    pub async fn exchange_client_credentials(&self) -> Result<BasicTokenResponse, Box<dyn Error>> {
+    pub async fn exchange_client_credentials(&self) -> Result<BasicTokenResponse> {
         log::debug!("Exchanging credentials for a token...");
 
         // NOTE: offline_mode doesn't make any sense for Client Credentials.
@@ -118,7 +118,7 @@ impl<'a> OAuthClient<'a> {
 
     pub async fn exchange_resource_owner_password_client_credentials(
         &self,
-    ) -> Result<BasicTokenResponse, Box<dyn Error>> {
+    ) -> Result<BasicTokenResponse> {
         log::debug!("Exchanging credentials for a token...");
 
         let username =
@@ -143,7 +143,7 @@ impl<'a> OAuthClient<'a> {
         &self,
         code: &str,
         code_verifier: Option<PkceCodeVerifier>,
-    ) -> Result<BasicTokenResponse, Box<dyn Error>> {
+    ) -> Result<BasicTokenResponse> {
         log::debug!("Exchanging code for a token...");
         let mut builder = self
             .inner
@@ -159,10 +159,7 @@ impl<'a> OAuthClient<'a> {
         Ok(token)
     }
 
-    pub async fn refresh_token(
-        &self,
-        refresh_token: String,
-    ) -> Result<BasicTokenResponse, Box<dyn Error>> {
+    pub async fn refresh_token(&self, refresh_token: String) -> Result<BasicTokenResponse> {
         log::debug!("Refreshing token...");
 
         let refresh_token = RefreshToken::new(refresh_token);

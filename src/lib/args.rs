@@ -1,7 +1,7 @@
+use anyhow::{Context, Result};
 use clap::error::ErrorKind;
 use clap::{ArgGroup, Command, CommandFactory, Parser, ValueEnum};
 use dotenv::dotenv;
-use std::error::Error;
 
 #[derive(ValueEnum, Clone, Debug)]
 pub enum Grant {
@@ -195,19 +195,22 @@ impl Args {
         }
     }
 
-    fn parse_client_secret(mut args: Arguments) -> Result<Arguments, Box<dyn Error>> {
+    fn parse_client_secret(mut args: Arguments) -> Result<Arguments> {
         if args.client_secret.is_some() && std::env::var("DOKEN_CLIENT_SECRET").is_err() {
             eprintln!("Please use `--client-secret-stdin` as a more secure variant.");
         }
 
         if args.client_secret_stdin {
-            args.client_secret = Some(rpassword::prompt_password("Client Secret: ").unwrap());
+            args.client_secret = Some(
+                rpassword::prompt_password("Client Secret: ")
+                    .context("Couldn't read a client secret")?,
+            );
         }
 
         Ok(args)
     }
 
-    fn parse_password(mut args: Arguments) -> Result<Arguments, Box<dyn Error>> {
+    fn parse_password(mut args: Arguments) -> Result<Arguments> {
         if args.password.is_some() && std::env::var("DOKEN_PASSWORD").is_err() {
             eprintln!("Please use `--password-stdin` as a more secure variant.");
         }
@@ -219,7 +222,7 @@ impl Args {
         Ok(args)
     }
 
-    pub fn parse() -> Result<Arguments, Box<dyn Error>> {
+    pub fn parse() -> Result<Arguments> {
         log::debug!("Parsing application arguments...");
         if dotenv().is_ok() {
             log::debug!(".env file found");

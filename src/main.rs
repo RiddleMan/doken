@@ -9,6 +9,8 @@ use crate::lib::implicit_retriever::ImplicitRetriever;
 use crate::lib::oauth_client::OAuthClient;
 use crate::lib::resource_owner_password_client_credentials_retriever::ResourceOwnerPasswordClientCredentialsRetriever;
 use crate::lib::token_retriever::TokenRetriever;
+use anyhow::Context;
+use anyhow::Result;
 use lib::token_info::TokenInfo;
 use std::env;
 use std::process::exit;
@@ -24,7 +26,7 @@ fn enable_debug_via_args() {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<()> {
     enable_debug_via_args();
     env_logger::init();
 
@@ -58,7 +60,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Grant::ClientCredentials => Box::new(ClientCredentialsRetriever::new(&oauth_client)),
     };
 
-    let token_info = retriever.retrieve().await?;
+    let token_info = retriever
+        .retrieve()
+        .await
+        .context("Failed to retrieve a token")?;
 
     file_state
         .upsert_token_info(args.client_id.to_owned(), token_info.to_owned())
