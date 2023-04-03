@@ -1,7 +1,7 @@
 use anyhow::Result;
 use std::process::Command;
 
-pub fn open_authorization_url<'a>(url: &str, callback_url: &str) -> Result<()> {
+pub fn open_authorization_url(url: &str, callback_url: &str) -> Result<()> {
     log::debug!(
         "Using `{}` url to initiate user session. Callback url is: {}",
         url,
