@@ -11,14 +11,15 @@ use crate::retrievers::resource_owner_password_client_credentials_retriever::Res
 use crate::retrievers::token_retriever::TokenRetriever;
 use anyhow::Context;
 use anyhow::Result;
-use lib::token_info::TokenInfo;
 use std::env;
 use std::process::exit;
+use token_info::TokenInfo;
 
 mod args;
 mod auth_server;
 mod lib;
 mod retrievers;
+mod token_info;
 
 fn enable_debug_via_args() {
     let has_debug_flag = env::args().any(|s| s.eq("--debug") || s.eq("-d"));

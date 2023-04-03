@@ -1,4 +1,4 @@
-use crate::{lib::token_info::TokenInfo, OAuthClient};
+use crate::{token_info::TokenInfo, OAuthClient};
 use anyhow::Result;
 use async_trait::async_trait;
 

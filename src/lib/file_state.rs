@@ -1,4 +1,4 @@
-use crate::lib::token_info::TokenInfo;
+use crate::token_info::TokenInfo;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
