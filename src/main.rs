@@ -16,6 +16,7 @@ use std::env;
 use std::process::exit;
 
 mod args;
+mod auth_server;
 mod lib;
 
 fn enable_debug_via_args() {
