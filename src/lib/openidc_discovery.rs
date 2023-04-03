@@ -11,8 +11,9 @@ struct OpenIDProviderMetadata {
 pub async fn get_endpoints_from_discovery_url(discovery_url: String) -> Result<(String, String)> {
     let result = reqwest::get(discovery_url.to_owned())
         .await
-        .expect("Couldn't reach out to provided `--discovery-url`")
-        .error_for_status()?
+        .context("Couldn't reach out to provided `--discovery-url`")?
+        .error_for_status()
+        .context("Failed during OIDC discovery call")?
         .json::<OpenIDProviderMetadata>()
         .await
         .context("Couldn't process json given by `--discovery-url`")?;

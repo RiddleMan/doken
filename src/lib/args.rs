@@ -1,4 +1,3 @@
-use anyhow::{Context, Result};
 use clap::error::ErrorKind;
 use clap::{ArgGroup, Command, CommandFactory, Parser, ValueEnum};
 use dotenv::dotenv;

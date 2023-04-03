@@ -1,6 +1,6 @@
 use crate::lib;
 use crate::lib::args::Arguments;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use oauth2::basic::{BasicClient, BasicTokenResponse};
 use oauth2::reqwest::async_http_client;
 use oauth2::{
@@ -14,20 +14,29 @@ pub struct OAuthClient<'a> {
     args: &'a Arguments,
     inner: BasicClient,
 }
-
 impl<'a> OAuthClient<'a> {
     fn get_client(
         args: &Arguments,
-        token_url: String,
-        authorization_url: String,
+        token_url: &str,
+        authorization_url: &str,
     ) -> Result<BasicClient> {
         let port = args.port;
 
         Ok(BasicClient::new(
             ClientId::new(args.client_id.to_owned()),
             args.client_secret.clone().map(ClientSecret::new),
-            AuthUrl::new(authorization_url)?,
-            Some(TokenUrl::new(token_url)?),
+            AuthUrl::new(authorization_url.to_owned()).with_context(|| {
+                format!(
+                    "`--authorization-url` is not a correct absolute URL. Provided value: {}",
+                    authorization_url
+                )
+            })?,
+            Some(TokenUrl::new(token_url.to_owned()).with_context(|| {
+                format!(
+                    "`--token-url` is not a correct absolute URL. Provided value: {}",
+                    token_url
+                )
+            })?),
         )
         .set_redirect_uri(RedirectUrl::new(format!("http://localhost:{}", port)).unwrap()))
     }
@@ -56,7 +65,8 @@ impl<'a> OAuthClient<'a> {
             authorization_url
         );
 
-        let client = Self::get_client(args, token_url, authorization_url)?;
+        let client = Self::get_client(args, &token_url, &authorization_url)
+            .context("Failed to create a OAuthClient")?;
 
         log::debug!("OAuthClient created");
 
@@ -111,7 +121,10 @@ impl<'a> OAuthClient<'a> {
             builder = builder.add_extra_param("audience", aud);
         }
 
-        let token = builder.request_async(async_http_client).await?;
+        let token = builder
+            .request_async(async_http_client)
+            .await
+            .context("Failed to exchange of client credentials for a token")?;
         log::debug!("Exchange done");
         Ok(token)
     }
@@ -134,7 +147,10 @@ impl<'a> OAuthClient<'a> {
             builder = builder.add_extra_param("audience", aud);
         }
 
-        let token = builder.request_async(async_http_client).await?;
+        let token = builder
+            .request_async(async_http_client)
+            .await
+            .context("Failed to exchange client credentials for a token")?;
         log::debug!("Exchange done");
         Ok(token)
     }
@@ -153,7 +169,10 @@ impl<'a> OAuthClient<'a> {
             builder = builder.set_pkce_verifier(verifier);
         }
 
-        let token: BasicTokenResponse = builder.request_async(async_http_client).await?;
+        let token: BasicTokenResponse = builder
+            .request_async(async_http_client)
+            .await
+            .context("Failed to exchange code for a token")?;
         log::debug!("Exchange done");
 
         Ok(token)
@@ -168,7 +187,8 @@ impl<'a> OAuthClient<'a> {
             .inner
             .exchange_refresh_token(&refresh_token)
             .request_async(async_http_client)
-            .await?;
+            .await
+            .context("Failed to exchange refresh token to a new token")?;
 
         log::debug!("Refresh done");
         Ok(response)
