@@ -3,6 +3,7 @@ use crate::lib::auth_server::AuthServer;
 use crate::lib::oauth_client::OAuthClient;
 use crate::lib::token_retriever::TokenRetriever;
 use crate::TokenInfo;
+use anyhow::Result;
 use async_trait::async_trait;
 use oauth2::PkceCodeChallenge;
 use std::process::Command;
@@ -23,7 +24,7 @@ impl<'a> AuthorizationCodeWithPKCERetriever<'a> {
 
 #[async_trait(?Send)]
 impl<'a> TokenRetriever for AuthorizationCodeWithPKCERetriever<'a> {
-    async fn retrieve(&self) -> Result<TokenInfo, Box<dyn std::error::Error>> {
+    async fn retrieve(&self) -> Result<TokenInfo> {
         let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
 
         let (url, csrf) = self.oauth_client.authorize_url(Some(pkce_challenge));
@@ -36,7 +37,7 @@ impl<'a> TokenRetriever for AuthorizationCodeWithPKCERetriever<'a> {
             panic!("Url couldn't be opened.")
         }
 
-        let code = AuthServer::new(self.args.port)
+        let code = AuthServer::new(self.args.port)?
             .get_code(self.args.timeout, csrf)
             .await?;
 

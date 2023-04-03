@@ -1,21 +1,16 @@
 use crate::lib::args::Arguments;
 use crate::lib::oauth_client::OAuthClient;
 use crate::{FileState, TokenInfo, TokenRetriever};
+use anyhow::Result;
 use async_trait::async_trait;
-use std::error::Error;
-use std::fmt::{Debug, Display, Formatter};
 use std::time::SystemTime;
+use thiserror::Error;
 
-#[derive(Debug)]
-struct TokenInfoNotFoundError;
-
-impl Display for TokenInfoNotFoundError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Token not found in state file")
-    }
+#[derive(Error, Debug)]
+enum FileRetrieverError {
+    #[error("Token not found in state file")]
+    TokenInfoNotFound,
 }
-
-impl Error for TokenInfoNotFoundError {}
 
 pub struct FileRetriever<'a> {
     oauth_client: &'a OAuthClient<'a>,
@@ -32,7 +27,7 @@ impl<'a> FileRetriever<'a> {
         }
     }
 
-    async fn refresh_token(&self, refresh_token: &str) -> Result<TokenInfo, Box<dyn Error>> {
+    async fn refresh_token(&self, refresh_token: &str) -> Result<TokenInfo> {
         let result = self
             .oauth_client
             .refresh_token(refresh_token.to_owned())
@@ -53,7 +48,7 @@ impl<'a> FileRetriever<'a> {
                     .clear_token_info(self.args.client_id.to_owned())
                     .await?;
 
-                Err(Box::new(TokenInfoNotFoundError {}))
+                Err(FileRetrieverError::TokenInfoNotFound.into())
             }
         }
     }
@@ -61,11 +56,11 @@ impl<'a> FileRetriever<'a> {
 
 #[async_trait(?Send)]
 impl<'a> TokenRetriever for FileRetriever<'a> {
-    async fn retrieve(&self) -> Result<TokenInfo, Box<dyn Error>> {
+    async fn retrieve(&self) -> Result<TokenInfo> {
         let token_info = self.file_state.read_token_info(&self.args.client_id).await;
 
         if token_info.is_none() {
-            return Err(Box::new(TokenInfoNotFoundError {}));
+            return Err(FileRetrieverError::TokenInfoNotFound.into());
         }
 
         let token_info = token_info.unwrap();
@@ -89,7 +84,7 @@ impl<'a> TokenRetriever for FileRetriever<'a> {
                     .clear_token_info(self.args.client_id.to_owned())
                     .await?;
 
-                Err(Box::new(TokenInfoNotFoundError {}))
+                Err(FileRetrieverError::TokenInfoNotFound.into())
             }
         }
     }

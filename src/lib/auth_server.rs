@@ -1,43 +1,47 @@
 use crate::TokenInfo;
+use anyhow::{anyhow, Context, Result};
 use oauth2::CsrfToken;
 use std::borrow::Cow;
-use std::error::Error;
-use std::fmt::{Display, Formatter};
 use std::ops::Add;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
+use thiserror::Error;
 use tiny_http::{Header, Method, Request, Response, Server as TinyServer};
 use tokio::sync::oneshot;
 use url::Url;
 
-#[derive(Debug)]
-struct Timeout {}
-
-impl Display for Timeout {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "No requests with required data. Timeout.")
-    }
+#[derive(Error, Debug)]
+enum ServerError {
+    #[error("No requests with required data. Timeout.")]
+    Timeout,
 }
-
-impl Error for Timeout {}
 
 pub struct AuthServer {
     server: Arc<TinyServer>,
 }
 
 impl AuthServer {
-    pub fn new(port: u16) -> AuthServer {
+    pub fn new(port: u16) -> Result<AuthServer> {
         log::debug!("Creating http server on port {}", port);
-        let server = TinyServer::http(format!("127.0.0.1:{}", port)).unwrap();
+        let server = TinyServer::http(format!("127.0.0.1:{}", port))
+            .map_err(|e| anyhow!(e))
+            .with_context(|| {
+            let base_str = format!("Couldn't create a server on port: {}.", port);
+            if port <= 1024 {
+                format!("{}\nYou're trying to listen on restricted port. Make sure you have required permissions or run it using root privileges `sudo doken`", base_str)
+            } else {
+                base_str
+            }
+        })?;
 
         log::info!("Waiting for connections...");
-        AuthServer {
+        Ok(AuthServer {
             server: Arc::new(server),
-        }
+        })
     }
 
-    fn response_with_default_message(request: Request) -> Result<(), Box<dyn Error>> {
+    fn response_with_default_message(request: Request) -> Result<()> {
         let html_header = Header::from_str("Content-Type: text/html; charset=UTF-8").unwrap();
         let mut response = Response::from_string("<!doctype html><html lang=\"en\"><script>window.close();</script><head><meta charset=utf-8><title>Doken</title></head><body>Successfully signed in. Close current tab.</body></html>");
         response.add_header(html_header);
@@ -47,11 +51,7 @@ impl AuthServer {
         Ok(())
     }
 
-    async fn process_request<TResponse, F>(
-        &self,
-        timeout: u64,
-        f: F,
-    ) -> Result<TResponse, Box<dyn Error>>
+    async fn process_request<TResponse, F>(&self, timeout: u64, f: F) -> Result<TResponse>
     where
         TResponse: Send + Clone + Sync + 'static,
         F: Send + Fn(Request) -> Option<TResponse> + 'static,
@@ -85,19 +85,15 @@ impl AuthServer {
         tokio::select! {
             _ = rx_sleep => {
                 self.server.unblock();
-                Err::<TResponse, Box<dyn Error>>(Box::new(Timeout {}))
+                Err::<TResponse, anyhow::Error>(ServerError::Timeout.into())
             }
             Ok(response) = rx_server => {
-                Ok::<TResponse, Box<dyn Error>>(response)
+                Ok::<TResponse, anyhow::Error>(response)
             }
         }
     }
 
-    pub async fn get_code(
-        &self,
-        timeout: u64,
-        csrf_token: CsrfToken,
-    ) -> Result<String, Box<dyn Error>> {
+    pub async fn get_code(&self, timeout: u64, csrf_token: CsrfToken) -> Result<String> {
         self.process_request(timeout, move |request| {
             let url = Url::parse(format!("http://localhost{}", request.url()).as_str()).unwrap();
             let state = url.query_pairs().find(|qp| qp.0.eq("state"));
@@ -130,11 +126,7 @@ impl AuthServer {
         .await
     }
 
-    pub async fn get_token_data(
-        &self,
-        timeout: u64,
-        csrf_token: CsrfToken,
-    ) -> Result<TokenInfo, Box<dyn Error>> {
+    pub async fn get_token_data(&self, timeout: u64, csrf_token: CsrfToken) -> Result<TokenInfo> {
         self.process_request(timeout, move |mut request| {
             let mut body = String::new();
             match request.method() {

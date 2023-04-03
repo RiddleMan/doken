@@ -3,6 +3,7 @@ use crate::lib::auth_server::AuthServer;
 use crate::lib::oauth_client::OAuthClient;
 use crate::lib::token_retriever::TokenRetriever;
 use crate::TokenInfo;
+use anyhow::Result;
 use async_trait::async_trait;
 use std::process::Command;
 
@@ -22,7 +23,7 @@ impl<'a> AuthorizationCodeRetriever<'a> {
 
 #[async_trait(?Send)]
 impl<'a> TokenRetriever for AuthorizationCodeRetriever<'a> {
-    async fn retrieve(&self) -> Result<TokenInfo, Box<dyn std::error::Error>> {
+    async fn retrieve(&self) -> Result<TokenInfo> {
         let (url, csrf) = self.oauth_client.authorize_url(None);
         log::debug!("Using `{}` url to initiate user session", url);
 
@@ -33,7 +34,7 @@ impl<'a> TokenRetriever for AuthorizationCodeRetriever<'a> {
             panic!("Url couldn't be opened.")
         }
 
-        let code = AuthServer::new(self.args.port)
+        let code = AuthServer::new(self.args.port)?
             .get_code(self.args.timeout, csrf)
             .await?;
 

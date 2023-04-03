@@ -2,8 +2,8 @@ use crate::lib::args::Arguments;
 use crate::lib::auth_server::AuthServer;
 use crate::lib::token_retriever::TokenRetriever;
 use crate::{OAuthClient, TokenInfo};
+use anyhow::Result;
 use async_trait::async_trait;
-use std::error::Error;
 use std::process::Command;
 
 pub struct ImplicitRetriever<'a> {
@@ -22,7 +22,7 @@ impl<'a> ImplicitRetriever<'a> {
 
 #[async_trait(?Send)]
 impl<'a> TokenRetriever for ImplicitRetriever<'a> {
-    async fn retrieve(&self) -> Result<TokenInfo, Box<dyn Error>> {
+    async fn retrieve(&self) -> Result<TokenInfo> {
         let (url, csrf) = self.oauth_client.implicit_url();
 
         log::debug!("Opening a browser with {url} ...");
@@ -32,7 +32,7 @@ impl<'a> TokenRetriever for ImplicitRetriever<'a> {
             panic!("Url couldn't be opened.")
         }
 
-        AuthServer::new(self.args.port)
+        AuthServer::new(self.args.port)?
             .get_token_data(self.args.timeout, csrf)
             .await
     }
