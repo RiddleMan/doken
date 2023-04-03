@@ -1,3 +1,5 @@
+#![deny(warnings)]
+
 use crate::args::Args;
 use crate::args::Grant;
 use crate::file_state::FileState;
