@@ -1,4 +1,3 @@
-pub mod args;
 mod auth_server;
 pub mod authorization_code_retriever;
 pub mod authorization_code_with_pkce_retriever;

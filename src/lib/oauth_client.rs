@@ -1,5 +1,5 @@
+use crate::args::Arguments;
 use crate::lib;
-use crate::lib::args::Arguments;
 use anyhow::{Context, Result};
 use oauth2::basic::{BasicClient, BasicTokenResponse};
 use oauth2::reqwest::async_http_client;

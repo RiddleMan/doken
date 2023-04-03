@@ -1,5 +1,5 @@
-use crate::lib::args::Args;
-use crate::lib::args::Grant;
+use crate::args::Args;
+use crate::args::Grant;
 use crate::lib::authorization_code_retriever::AuthorizationCodeRetriever;
 use crate::lib::authorization_code_with_pkce_retriever::AuthorizationCodeWithPKCERetriever;
 use crate::lib::client_credentials_retriever::ClientCredentialsRetriever;
@@ -15,6 +15,7 @@ use lib::token_info::TokenInfo;
 use std::env;
 use std::process::exit;
 
+mod args;
 mod lib;
 
 fn enable_debug_via_args() {
