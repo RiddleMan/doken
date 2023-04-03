@@ -1,10 +1,13 @@
 use crate::args::Arguments;
 use crate::lib::oauth_client::OAuthClient;
-use crate::{FileState, TokenInfo, TokenRetriever};
+use crate::lib::token_info::TokenInfo;
+use crate::FileState;
 use anyhow::Result;
 use async_trait::async_trait;
 use std::time::SystemTime;
 use thiserror::Error;
+
+use super::token_retriever::TokenRetriever;
 
 #[derive(Error, Debug)]
 enum FileRetrieverError {
