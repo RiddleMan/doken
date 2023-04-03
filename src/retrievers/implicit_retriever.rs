@@ -1,10 +1,10 @@
 use crate::args::Arguments;
 use crate::auth_server::AuthServer;
+use crate::open_authorization_url::open_authorization_url;
 use crate::token_info::TokenInfo;
 use crate::OAuthClient;
 use anyhow::Result;
 use async_trait::async_trait;
-use std::process::Command;
 
 use super::token_retriever::TokenRetriever;
 
@@ -27,14 +27,9 @@ impl<'a> TokenRetriever for ImplicitRetriever<'a> {
     async fn retrieve(&self) -> Result<TokenInfo> {
         let (url, csrf) = self.oauth_client.implicit_url();
 
-        log::debug!("Opening a browser with {url} ...");
-        let status = Command::new("open").arg(url.as_str()).status()?;
+        open_authorization_url(url.as_str(), &self.args.callback_url)?;
 
-        if !status.success() {
-            panic!("Url couldn't be opened.")
-        }
-
-        AuthServer::new(self.args.port)?
+        AuthServer::new(&self.args.callback_url)?
             .get_token_data(self.args.timeout, csrf)
             .await
     }

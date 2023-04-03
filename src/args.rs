@@ -46,13 +46,17 @@ pub struct Arguments {
     #[clap(long, env = "DOKEN_DISCOVERY_URL")]
     pub discovery_url: Option<String>,
 
+    /// Callback URL that's been set for your application
+    #[clap(
+        long,
+        default_value = "http://localhost:8081",
+        env = "DOKEN_CALLBACK_URL"
+    )]
+    pub callback_url: String,
+
     /// OAuth 2.0 Client Identifier https://www.rfc-editor.org/rfc/rfc6749#section-2.2
     #[clap(long, env = "DOKEN_CLIENT_ID")]
     pub client_id: String,
-
-    /// Port for callback url
-    #[clap(long, default_value_t = 8081, env = "DOKEN_PORT")]
-    pub port: u16,
 
     /// OAuth 2.0 Client Secret. Please use `--client-secret-stdin`, because it's not get stored in a shell history.  https://www.rfc-editor.org/rfc/rfc6749#section-2.3.1
     #[clap(long, env = "DOKEN_CLIENT_SECRET")]
