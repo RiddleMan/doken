@@ -1,5 +1,5 @@
 use crate::lib::token_info::TokenInfo;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -47,7 +47,14 @@ impl FileState {
         log::debug!("Writing the state file");
         let state_str = serde_json::to_string(state).unwrap();
 
-        fs::write(&self.file_path, state_str).await?;
+        fs::write(&self.file_path, state_str)
+            .await
+            .with_context(|| {
+                format!(
+                    "Failed to write to {} file",
+                    &self.file_path.as_os_str().to_string_lossy()
+                )
+            })?;
 
         Ok(())
     }

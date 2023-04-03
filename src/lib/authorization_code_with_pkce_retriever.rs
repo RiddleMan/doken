@@ -37,7 +37,7 @@ impl<'a> TokenRetriever for AuthorizationCodeWithPKCERetriever<'a> {
             panic!("Url couldn't be opened.")
         }
 
-        let code = AuthServer::new(self.args.port)
+        let code = AuthServer::new(self.args.port)?
             .get_code(self.args.timeout, csrf)
             .await?;
 

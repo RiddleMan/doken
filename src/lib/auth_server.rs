@@ -1,5 +1,5 @@
 use crate::TokenInfo;
-use anyhow::Result;
+use anyhow::{anyhow, Context, Result};
 use oauth2::CsrfToken;
 use std::borrow::Cow;
 use std::ops::Add;
@@ -22,14 +22,23 @@ pub struct AuthServer {
 }
 
 impl AuthServer {
-    pub fn new(port: u16) -> AuthServer {
+    pub fn new(port: u16) -> Result<AuthServer> {
         log::debug!("Creating http server on port {}", port);
-        let server = TinyServer::http(format!("127.0.0.1:{}", port)).unwrap();
+        let server = TinyServer::http(format!("127.0.0.1:{}", port))
+            .map_err(|e| anyhow!(e))
+            .with_context(|| {
+            let base_str = format!("Couldn't create a server on port: {}.", port);
+            if port <= 1024 {
+                format!("{}\nYou're trying to listen on restricted port. Make sure you have required permissions or run it using root privileges `sudo doken`", base_str)
+            } else {
+                base_str
+            }
+        })?;
 
         log::info!("Waiting for connections...");
-        AuthServer {
+        Ok(AuthServer {
             server: Arc::new(server),
-        }
+        })
     }
 
     fn response_with_default_message(request: Request) -> Result<()> {
