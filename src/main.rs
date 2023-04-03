@@ -1,7 +1,7 @@
 use crate::args::Args;
 use crate::args::Grant;
 use crate::file_state::FileState;
-use crate::lib::oauth_client::OAuthClient;
+use crate::oauth_client::OAuthClient;
 use crate::retrievers::authorization_code_retriever::AuthorizationCodeRetriever;
 use crate::retrievers::authorization_code_with_pkce_retriever::AuthorizationCodeWithPKCERetriever;
 use crate::retrievers::client_credentials_retriever::ClientCredentialsRetriever;
@@ -18,7 +18,8 @@ use token_info::TokenInfo;
 mod args;
 mod auth_server;
 mod file_state;
-mod lib;
+mod oauth_client;
+mod openidc_discovery;
 mod retrievers;
 mod token_info;
 
