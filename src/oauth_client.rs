@@ -20,14 +20,6 @@ impl<'a> OAuthClient<'a> {
         token_url: &str,
         authorization_url: &str,
     ) -> Result<BasicClient> {
-        let port = args.port;
-
-        let redirect_url = if port == 80 {
-            "http://localhost".to_owned()
-        } else {
-            format!("http://localhost:{}", port)
-        };
-
         Ok(BasicClient::new(
             ClientId::new(args.client_id.to_owned()),
             args.client_secret.clone().map(ClientSecret::new),
@@ -44,7 +36,7 @@ impl<'a> OAuthClient<'a> {
                 )
             })?),
         )
-        .set_redirect_uri(RedirectUrl::new(redirect_url).unwrap()))
+        .set_redirect_uri(RedirectUrl::new(args.callback_url.to_owned()).unwrap()))
     }
 
     pub async fn new(args: &Arguments) -> Result<OAuthClient> {

@@ -22,7 +22,9 @@ pub struct AuthServer {
 }
 
 impl AuthServer {
-    pub fn new(port: u16) -> Result<AuthServer> {
+    pub fn new(callback_url: &str) -> Result<AuthServer> {
+        let url = Url::parse(callback_url)?;
+        let port = url.port_or_known_default().unwrap();
         log::debug!("Creating http server on port {}", port);
         let server = TinyServer::http(format!("127.0.0.1:{}", port))
             .map_err(|e| anyhow!(e))

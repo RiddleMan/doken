@@ -52,7 +52,7 @@ pub struct Arguments {
         default_value = "http://localhost:8081",
         env = "DOKEN_CALLBACK_URL"
     )]
-    pub callback_url: Option<String>,
+    pub callback_url: String,
 
     /// OAuth 2.0 Client Identifier https://www.rfc-editor.org/rfc/rfc6749#section-2.2
     #[clap(long, env = "DOKEN_CLIENT_ID")]
