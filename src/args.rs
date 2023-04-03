@@ -46,6 +46,10 @@ pub struct Arguments {
     #[clap(long, env = "DOKEN_DISCOVERY_URL")]
     pub discovery_url: Option<String>,
 
+    /// Callback URL that's been set for your application
+    #[clap(long, env = "DOKEN_CALLBACK_URL")]
+    pub callback_url: Option<String>,
+
     /// OAuth 2.0 Client Identifier https://www.rfc-editor.org/rfc/rfc6749#section-2.2
     #[clap(long, env = "DOKEN_CLIENT_ID")]
     pub client_id: String,
