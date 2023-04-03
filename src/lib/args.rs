@@ -195,22 +195,19 @@ impl Args {
         }
     }
 
-    fn parse_client_secret(mut args: Arguments) -> Result<Arguments> {
+    fn parse_client_secret(mut args: Arguments) -> Arguments {
         if args.client_secret.is_some() && std::env::var("DOKEN_CLIENT_SECRET").is_err() {
             eprintln!("Please use `--client-secret-stdin` as a more secure variant.");
         }
 
         if args.client_secret_stdin {
-            args.client_secret = Some(
-                rpassword::prompt_password("Client Secret: ")
-                    .context("Couldn't read a client secret")?,
-            );
+            args.client_secret = Some(rpassword::prompt_password("Client Secret: ").unwrap());
         }
 
-        Ok(args)
+        args
     }
 
-    fn parse_password(mut args: Arguments) -> Result<Arguments> {
+    fn parse_password(mut args: Arguments) -> Arguments {
         if args.password.is_some() && std::env::var("DOKEN_PASSWORD").is_err() {
             eprintln!("Please use `--password-stdin` as a more secure variant.");
         }
@@ -219,10 +216,10 @@ impl Args {
             args.password = Some(rpassword::prompt_password("Password: ").unwrap());
         }
 
-        Ok(args)
+        args
     }
 
-    pub fn parse() -> Result<Arguments> {
+    pub fn parse() -> Arguments {
         log::debug!("Parsing application arguments...");
         if dotenv().is_ok() {
             log::debug!(".env file found");
@@ -232,12 +229,12 @@ impl Args {
 
         let args = Arguments::parse();
         Self::assert_grant_specific_arguments(&args);
-        let mut args = Self::parse_client_secret(args)?;
-        args = Self::parse_password(args)?;
+        let mut args = Self::parse_client_secret(args);
+        args = Self::parse_password(args);
 
         log::debug!("Argument parsing done");
         log::debug!("Running with arguments: {:#?}", args);
 
-        Ok(args)
+        args
     }
 }

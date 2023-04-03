@@ -30,7 +30,7 @@ async fn main() -> Result<()> {
     enable_debug_via_args();
     env_logger::init();
 
-    let args = Args::parse()?;
+    let args = Args::parse();
 
     let file_state = FileState::new();
     let oauth_client = OAuthClient::new(&args).await?;
