@@ -1,5 +1,5 @@
-use crate::lib;
-use crate::lib::args::Arguments;
+use crate::args::Arguments;
+use crate::openidc_discovery::get_endpoints_from_discovery_url;
 use anyhow::{Context, Result};
 use oauth2::basic::{BasicClient, BasicTokenResponse};
 use oauth2::reqwest::async_http_client;
@@ -57,7 +57,7 @@ impl<'a> OAuthClient<'a> {
                     discovery_url
                 );
 
-                lib::openidc_discovery::get_endpoints_from_discovery_url(discovery_url).await?
+                get_endpoints_from_discovery_url(discovery_url).await?
             } else {
                 (
                     args.token_url.to_owned().unwrap(),

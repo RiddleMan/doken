@@ -1,7 +1,8 @@
-use crate::lib::token_retriever::TokenRetriever;
-use crate::{OAuthClient, TokenInfo};
+use crate::{token_info::TokenInfo, OAuthClient};
 use anyhow::Result;
 use async_trait::async_trait;
+
+use super::token_retriever::TokenRetriever;
 
 pub struct ResourceOwnerPasswordClientCredentialsRetriever<'a> {
     oauth_client: &'a OAuthClient<'a>,

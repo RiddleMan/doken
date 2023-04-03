@@ -1,21 +1,29 @@
-use crate::lib::args::Args;
-use crate::lib::args::Grant;
-use crate::lib::authorization_code_retriever::AuthorizationCodeRetriever;
-use crate::lib::authorization_code_with_pkce_retriever::AuthorizationCodeWithPKCERetriever;
-use crate::lib::client_credentials_retriever::ClientCredentialsRetriever;
-use crate::lib::file_retriever::FileRetriever;
-use crate::lib::file_state::FileState;
-use crate::lib::implicit_retriever::ImplicitRetriever;
-use crate::lib::oauth_client::OAuthClient;
-use crate::lib::resource_owner_password_client_credentials_retriever::ResourceOwnerPasswordClientCredentialsRetriever;
-use crate::lib::token_retriever::TokenRetriever;
+#![deny(warnings)]
+
+use crate::args::Args;
+use crate::args::Grant;
+use crate::file_state::FileState;
+use crate::oauth_client::OAuthClient;
+use crate::retrievers::authorization_code_retriever::AuthorizationCodeRetriever;
+use crate::retrievers::authorization_code_with_pkce_retriever::AuthorizationCodeWithPKCERetriever;
+use crate::retrievers::client_credentials_retriever::ClientCredentialsRetriever;
+use crate::retrievers::file_retriever::FileRetriever;
+use crate::retrievers::implicit_retriever::ImplicitRetriever;
+use crate::retrievers::resource_owner_password_client_credentials_retriever::ResourceOwnerPasswordClientCredentialsRetriever;
+use crate::retrievers::token_retriever::TokenRetriever;
 use anyhow::Context;
 use anyhow::Result;
-use lib::token_info::TokenInfo;
 use std::env;
 use std::process::exit;
+use token_info::TokenInfo;
 
-mod lib;
+mod args;
+mod auth_server;
+mod file_state;
+mod oauth_client;
+mod openidc_discovery;
+mod retrievers;
+mod token_info;
 
 fn enable_debug_via_args() {
     let has_debug_flag = env::args().any(|s| s.eq("--debug") || s.eq("-d"));

@@ -1,4 +1,4 @@
-use crate::TokenInfo;
+use crate::token_info::TokenInfo;
 use anyhow::Result;
 use async_trait::async_trait;
 

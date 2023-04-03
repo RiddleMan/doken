@@ -1,12 +1,13 @@
-use crate::lib::args::Arguments;
-use crate::lib::auth_server::AuthServer;
-use crate::lib::oauth_client::OAuthClient;
-use crate::lib::token_retriever::TokenRetriever;
-use crate::TokenInfo;
+use crate::args::Arguments;
+use crate::auth_server::AuthServer;
+use crate::oauth_client::OAuthClient;
+use crate::token_info::TokenInfo;
 use anyhow::Result;
 use async_trait::async_trait;
 use oauth2::PkceCodeChallenge;
 use std::process::Command;
+
+use super::token_retriever::TokenRetriever;
 
 pub struct AuthorizationCodeWithPKCERetriever<'a> {
     oauth_client: &'a OAuthClient<'a>,
