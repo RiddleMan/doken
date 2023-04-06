@@ -1,11 +1,11 @@
 use crate::args::Arguments;
-use crate::auth_server::AuthServer;
+use crate::auth_browser::AuthBrowser;
 use crate::oauth_client::OAuthClient;
-use crate::open_authorization_url::open_authorization_url;
 use crate::token_info::TokenInfo;
 use anyhow::Result;
 use async_trait::async_trait;
 use oauth2::PkceCodeChallenge;
+use url::Url;
 
 use super::token_retriever::TokenRetriever;
 
@@ -29,9 +29,8 @@ impl<'a> TokenRetriever for AuthorizationCodeWithPKCERetriever<'a> {
         let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
 
         let (url, csrf) = self.oauth_client.authorize_url(Some(pkce_challenge));
-        open_authorization_url(url.as_str(), &self.args.callback_url)?;
 
-        let code = AuthServer::new(&self.args.callback_url)?
+        let code = AuthBrowser::new(url, Url::parse(&self.args.callback_url)?)?
             .get_code(self.args.timeout, csrf)
             .await?;
 
