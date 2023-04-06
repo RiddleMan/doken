@@ -1,10 +1,10 @@
 use crate::args::Arguments;
-use crate::auth_server::AuthServer;
+use crate::auth_browser::AuthBrowser;
 use crate::oauth_client::OAuthClient;
-use crate::open_authorization_url::open_authorization_url;
 use crate::token_info::TokenInfo;
 use anyhow::Result;
 use async_trait::async_trait;
+use url::Url;
 
 use super::token_retriever::TokenRetriever;
 
@@ -26,9 +26,8 @@ impl<'a> AuthorizationCodeRetriever<'a> {
 impl<'a> TokenRetriever for AuthorizationCodeRetriever<'a> {
     async fn retrieve(&self) -> Result<TokenInfo> {
         let (url, csrf) = self.oauth_client.authorize_url(None);
-        open_authorization_url(url.as_str(), &self.args.callback_url)?;
 
-        let code = AuthServer::new(&self.args.callback_url)?
+        let code = AuthBrowser::new(url, Url::parse(&self.args.callback_url)?)?
             .get_code(self.args.timeout, csrf)
             .await?;
 

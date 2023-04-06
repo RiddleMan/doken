@@ -22,7 +22,6 @@ mod auth_browser;
 mod auth_server;
 mod file_state;
 mod oauth_client;
-mod open_authorization_url;
 mod openidc_discovery;
 mod retrievers;
 mod token_info;
