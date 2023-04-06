@@ -402,6 +402,7 @@ version = "0.3.1"
 dependencies = [
  "anyhow",
  "async-trait",
+ "base64 0.21.0",
  "chromiumoxide",
  "clap",
  "dotenv",

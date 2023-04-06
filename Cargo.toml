@@ -27,3 +27,4 @@ anyhow = "1.0.70"
 thiserror = "1.0.40"
 chromiumoxide = { git = "https://github.com/mattsse/chromiumoxide", features = ["tokio-runtime"], default-features = false, branch = "main"}
 futures = "0.3.28"
+base64 = "0.21.0"
