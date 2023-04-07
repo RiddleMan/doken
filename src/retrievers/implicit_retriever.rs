@@ -1,10 +1,10 @@
 use crate::args::Arguments;
-use crate::auth_server::AuthServer;
-use crate::open_authorization_url::open_authorization_url;
+use crate::auth_browser::AuthBrowser;
 use crate::token_info::TokenInfo;
 use crate::OAuthClient;
 use anyhow::Result;
 use async_trait::async_trait;
+use url::Url;
 
 use super::token_retriever::TokenRetriever;
 
@@ -27,9 +27,7 @@ impl<'a> TokenRetriever for ImplicitRetriever<'a> {
     async fn retrieve(&self) -> Result<TokenInfo> {
         let (url, csrf) = self.oauth_client.implicit_url();
 
-        open_authorization_url(url.as_str(), &self.args.callback_url)?;
-
-        AuthServer::new(&self.args.callback_url)?
+        AuthBrowser::new(url, Url::parse(&self.args.callback_url)?)?
             .get_token_data(self.args.timeout, csrf)
             .await
     }

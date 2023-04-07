@@ -17,9 +17,19 @@ pub struct OAuthClient<'a> {
 impl<'a> OAuthClient<'a> {
     fn get_client(
         args: &Arguments,
-        token_url: &str,
+        token_url: Option<&str>,
         authorization_url: &str,
     ) -> Result<BasicClient> {
+        let token = match token_url {
+            Some(url) => Some(TokenUrl::new(url.to_owned()).with_context(|| {
+                format!(
+                    "`--token-url` is not a correct absolute URL. Provided value: {}",
+                    url
+                )
+            })?),
+            None => None,
+        };
+
         Ok(BasicClient::new(
             ClientId::new(args.client_id.to_owned()),
             args.client_secret.clone().map(ClientSecret::new),
@@ -29,12 +39,7 @@ impl<'a> OAuthClient<'a> {
                     authorization_url
                 )
             })?,
-            Some(TokenUrl::new(token_url.to_owned()).with_context(|| {
-                format!(
-                    "`--token-url` is not a correct absolute URL. Provided value: {}",
-                    token_url
-                )
-            })?),
+            token,
         )
         .set_redirect_uri(RedirectUrl::new(args.callback_url.to_owned()).unwrap()))
     }
@@ -49,21 +54,24 @@ impl<'a> OAuthClient<'a> {
                     discovery_url
                 );
 
-                get_endpoints_from_discovery_url(discovery_url).await?
+                let (token_url, authorization_url) =
+                    get_endpoints_from_discovery_url(discovery_url).await?;
+
+                (Some(token_url), authorization_url)
             } else {
                 (
-                    args.token_url.to_owned().unwrap(),
+                    args.token_url.to_owned(),
                     args.authorization_url.to_owned().unwrap(),
                 )
             };
 
         log::debug!(
-            "Resolved token_url={} and authorization_url={}",
+            "Resolved token_url={:?} and authorization_url={}",
             token_url,
             authorization_url
         );
 
-        let client = Self::get_client(args, &token_url, &authorization_url)
+        let client = Self::get_client(args, token_url.as_deref(), &authorization_url)
             .context("Failed to create a OAuthClient")?;
 
         log::debug!("OAuthClient created");

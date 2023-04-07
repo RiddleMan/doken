@@ -12,7 +12,6 @@ serde = { version = "1.0.144", features = ["derive"] }
 serde_json = { version = "1.0.95" }
 clap = { version = "4.0.26", features = ["env", "derive"] }
 tokio = { version = "1.20.4", features = ["full"] }
-tiny_http = "0.12.0"
 home = "0.5.3"
 url = "2.2.2"
 async-trait = "0.1.57"
@@ -25,3 +24,7 @@ form_urlencoded = "1.1.0"
 rpassword = "7.2.0"
 anyhow = "1.0.70"
 thiserror = "1.0.40"
+chromiumoxide = { git = "https://github.com/mattsse/chromiumoxide", features = ["tokio-runtime"], default-features = false, branch = "main"}
+futures = "0.3.28"
+base64 = "0.21.0"
+multer = "2.1.0"
