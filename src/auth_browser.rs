@@ -21,6 +21,9 @@ use url::Url;
 enum RequestError {
     #[error("No requests with required data. Timeout.")]
     Timeout,
+
+    #[error("The user closed the browser")]
+    BrowserClosed,
 }
 
 const CONTENT_OK: &str = "<html><head></head><body><h1>OK</h1></body></html>";
@@ -147,11 +150,14 @@ impl AuthBrowser {
             Ok(response) = rx_browser => {
                 Ok::<TResponse, anyhow::Error>(response)
             }
+            _ = handle => {
+                log::debug!("User closed the browser");
+                Err::<TResponse, anyhow::Error>(RequestError::BrowserClosed.into())
+            }
         };
 
-        browser.close().await?;
-        handle.await.unwrap();
-        intercept_handle.await.unwrap();
+        let _ = browser.close().await;
+        let _ = intercept_handle.await;
 
         response
     }
