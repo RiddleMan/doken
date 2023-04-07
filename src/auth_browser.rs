@@ -64,7 +64,6 @@ impl AuthBrowser {
         F: Send + Fn(Arc<EventRequestPaused>) -> Option<TResponse> + 'static,
     {
         let (tx_browser, rx_browser) = oneshot::channel();
-        let (tx_sleep, rx_sleep) = oneshot::channel();
 
         log::debug!("Opening chromium instance");
         let (mut browser, mut handler) = Browser::launch(
@@ -132,17 +131,11 @@ impl AuthBrowser {
             }
         });
 
-        tokio::spawn(async move {
-            tokio::time::sleep(Duration::from_millis(timeout)).await;
-
-            let _ = tx_sleep.send("timeout");
-        });
-
         log::debug!("Opening authorization page {}", self.authorization_url);
         page.goto(self.authorization_url.as_str()).await?;
 
         let response = tokio::select! {
-            _ = rx_sleep => {
+            _ = tokio::time::sleep(Duration::from_millis(timeout)) => {
                 log::debug!("Timeout");
                 Err::<TResponse, anyhow::Error>(RequestError::Timeout.into())
             }
