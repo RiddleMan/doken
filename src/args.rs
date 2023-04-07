@@ -4,15 +4,15 @@ use dotenv::dotenv;
 
 #[derive(ValueEnum, Clone, Debug)]
 pub enum Grant {
-    /// Authorization code with PKCE Grant. More: https://www.rfc-editor.org/rfc/rfc7636
+    /// Authorization code with PKCE Grant. More: <https://www.rfc-editor.org/rfc/rfc7636>
     AuthorizationCodeWithPKCE,
-    /// Authorization Code Grant. More: https://www.rfc-editor.org/rfc/rfc6749#section-4.1
+    /// Authorization Code Grant. More: <https://www.rfc-editor.org/rfc/rfc6749#section-4.1>
     AuthorizationCode,
-    /// Implicit Grant. More: https://www.rfc-editor.org/rfc/rfc6749#section-4.2
+    /// Implicit Grant. More: <https://www.rfc-editor.org/rfc/rfc6749#section-4.2>
     Implicit,
-    /// Resource Owner Client Credentials Grant. More: https://www.rfc-editor.org/rfc/rfc6749#section-4.3
+    /// Resource Owner Client Credentials Grant. More: <https://www.rfc-editor.org/rfc/rfc6749#section-4.3>
     ResourceOwnerPasswordClientCredentials,
-    /// Client credentials Grant. More: https://www.rfc-editor.org/rfc/rfc6749#section-4.4
+    /// Client credentials Grant. More: <https://www.rfc-editor.org/rfc/rfc6749#section-4.4>
     ClientCredentials,
 }
 
@@ -50,31 +50,31 @@ pub struct Arguments {
     #[clap(long, env = "DOKEN_CALLBACK_URL")]
     pub callback_url: Option<String>,
 
-    /// OAuth 2.0 Client Identifier https://www.rfc-editor.org/rfc/rfc6749#section-2.2
+    /// OAuth 2.0 Client Identifier <https://www.rfc-editor.org/rfc/rfc6749#section-2.2>
     #[clap(long, env = "DOKEN_CLIENT_ID")]
     pub client_id: String,
 
-    /// OAuth 2.0 Client Secret. Please use `--client-secret-stdin`, because it's not get stored in a shell history.  https://www.rfc-editor.org/rfc/rfc6749#section-2.3.1
+    /// OAuth 2.0 Client Secret. Please use `--client-secret-stdin`, because it's not get stored in a shell history.  <https://www.rfc-editor.org/rfc/rfc6749#section-2.3.1>
     #[clap(long, env = "DOKEN_CLIENT_SECRET")]
     pub client_secret: Option<String>,
 
-    /// OAuth 2.0 Client Secret from standard input https://www.rfc-editor.org/rfc/rfc6749#section-2.3.1
+    /// OAuth 2.0 Client Secret from standard input <https://www.rfc-editor.org/rfc/rfc6749#section-2.3.1>
     #[clap(long, action, default_value_t = false)]
     pub client_secret_stdin: bool,
 
-    /// OAuth 2.0 Resource Owner Password Client Credentials Grant's username https://www.rfc-editor.org/rfc/rfc6749#section-4.3.2
+    /// OAuth 2.0 Resource Owner Password Client Credentials Grant's username <https://www.rfc-editor.org/rfc/rfc6749#section-4.3.2>
     #[clap(short, long, env = "DOKEN_USERNAME")]
     pub username: Option<String>,
 
-    /// OAuth 2.0 Resource Owner Password Client Credentials Grant's password https://www.rfc-editor.org/rfc/rfc6749#section-4.3.2
+    /// OAuth 2.0 Resource Owner Password Client Credentials Grant's password <https://www.rfc-editor.org/rfc/rfc6749#section-4.3.2>
     #[clap(short, long, env = "DOKEN_PASSWORD")]
     pub password: Option<String>,
 
-    /// OAuth 2.0 Resource Owner Password Client Credentials Grant's password from standard input https://www.rfc-editor.org/rfc/rfc6749#section-4.3.2
+    /// OAuth 2.0 Resource Owner Password Client Credentials Grant's password from standard input <https://www.rfc-editor.org/rfc/rfc6749#section-4.3.2>
     #[clap(long, action, default_value_t = false)]
     pub password_stdin: bool,
 
-    /// OAuth 2.0 Scope https://www.rfc-editor.org/rfc/rfc6749#section-3.3
+    /// OAuth 2.0 Scope <https://www.rfc-editor.org/rfc/rfc6749#section-3.3>
     #[clap(long, default_value = "offline_access", env = "DOKEN_SCOPE")]
     pub scope: String,
 
