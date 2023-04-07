@@ -47,12 +47,8 @@ pub struct Arguments {
     pub discovery_url: Option<String>,
 
     /// Callback URL that's been set for your application
-    #[clap(
-        long,
-        default_value = "http://localhost:8081",
-        env = "DOKEN_CALLBACK_URL"
-    )]
-    pub callback_url: String,
+    #[clap(long, env = "DOKEN_CALLBACK_URL")]
+    pub callback_url: Option<String>,
 
     /// OAuth 2.0 Client Identifier https://www.rfc-editor.org/rfc/rfc6749#section-2.2
     #[clap(long, env = "DOKEN_CLIENT_ID")]
@@ -113,6 +109,14 @@ impl Args {
             cmd.error(
                 ErrorKind::MissingRequiredArgument,
                 "<--token-url, --authorization-url|--discovery-url> arguments have to be provided",
+            )
+            .exit();
+        }
+
+        if args.callback_url.is_none() {
+            cmd.error(
+                ErrorKind::MissingRequiredArgument,
+                "--callback-url argument have to be provided",
             )
             .exit();
         }
@@ -191,6 +195,14 @@ impl Args {
                     cmd.error(
                         ErrorKind::MissingRequiredArgument,
                         "<--authorization-url|--discovery-url> arguments have to be provided",
+                    )
+                    .exit();
+                }
+
+                if args.callback_url.is_none() {
+                    cmd.error(
+                        ErrorKind::MissingRequiredArgument,
+                        "--callback-url argument have to be provided",
                     )
                     .exit();
                 }

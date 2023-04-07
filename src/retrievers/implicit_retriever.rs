@@ -27,7 +27,7 @@ impl<'a> TokenRetriever for ImplicitRetriever<'a> {
     async fn retrieve(&self) -> Result<TokenInfo> {
         let (url, csrf) = self.oauth_client.implicit_url();
 
-        AuthBrowser::new(url, Url::parse(&self.args.callback_url)?)?
+        AuthBrowser::new(url, Url::parse(self.args.callback_url.as_deref().unwrap())?)?
             .get_token_data(self.args.timeout, csrf)
             .await
     }
