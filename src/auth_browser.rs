@@ -47,7 +47,7 @@ impl AuthBrowser {
         let (tx_sleep, rx_sleep) = oneshot::channel();
 
         log::debug!("Opening chromium instance");
-        let (mut browser, mut _handler) = Browser::launch(
+        let (mut browser, mut handler) = Browser::launch(
             BrowserConfig::builder()
                 .with_head()
                 .enable_request_intercept()
@@ -57,8 +57,10 @@ impl AuthBrowser {
         .await?;
 
         let handle = tokio::spawn(async move {
-            while let Some(h) = _handler.next().await {
+            while let Some(h) = handler.next().await {
                 if h.is_err() {
+                    // TODO: Detect that user has closed a browser. Fail immediately
+                    log::error!("Handler created an error");
                     break;
                 }
             }
@@ -118,7 +120,6 @@ impl AuthBrowser {
 
         log::debug!("Opening authorization page {}", self.authorization_url);
         page.goto(self.authorization_url.as_str()).await?;
-        page.wait_for_navigation().await?;
 
         let response = tokio::select! {
             _ = rx_sleep => {
