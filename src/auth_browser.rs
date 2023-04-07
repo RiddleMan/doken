@@ -70,6 +70,9 @@ impl AuthBrowser {
             BrowserConfig::builder()
                 .with_head()
                 .enable_request_intercept()
+                .window_size(800, 600)
+                .respect_https_errors()
+                .enable_cache()
                 .build()
                 .map_err(|e| anyhow!(e))?,
         )
