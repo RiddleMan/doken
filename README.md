@@ -16,10 +16,6 @@ brew tap RiddleMan/tap && brew install doken
 
 ## Usage
 
-### ⚠️ _Authorization code_ and _Authorization Code with PKCE_ notice
-
-If you want to use these grants firstly you have to set up your identity provider to allow http://localhost:8081/ callback url. If you want to change a port you could use `--port` argument for these grants.
-
 ### Basic _Authorization Code with PKCE_ grant
 
 The most common use case that most of the Identity Providers support (if your IdP doesn't support PKCE, please use _authorization-code_ grant). 
@@ -30,6 +26,7 @@ It opens a browser to pass the grant and authorize. Returns an _access_token_ as
 doken \
   --token-url https://my-idp.com/oauth/token \
   --authorization-url https://my-idp.com/authorize \
+  --callback-url https://my-app-domain.com/oauth2/callback \
   --client-id <client_id>
 ```
 
@@ -40,6 +37,7 @@ If you have an Identity Provider you constantly request, then you provide all of
 ```shell
 export DOKEN_TOKEN_URL=https://my-idp.com/oauth/token 
 export DOKEN_AUTHORIZATION_URL=https://my-idp.com/authorize
+export DOKEN_CALLBACK_URL=https://my-app-domain.com/oauth2/callback
 export DOKEN_CLIENT_ID=<client_id>
 export DOKEN_SECRET_ID=<client_secret>
 export DOKEN_PORT=8081
@@ -55,6 +53,7 @@ The tool detects the closest `.env` file in a tree structure to make it easier t
 ```
 DOKEN_TOKEN_URL=https://my-idp.com/oauth/token 
 DOKEN_AUTHORIZATION_URL=https://my-idp.com/authorize
+DOKEN_CALLBACK_URL=https://my-app-domain.com/oauth2/callback
 DOKEN_CLIENT_ID=<client_id>
 DOKEN_SECRET_ID=<client_secret>
 DOKEN_PORT=8081
@@ -80,17 +79,9 @@ curl -H "Authorization: Bearer $(doken)" https://my-api-url.com/users
 doken \
   --token-url https://my-idp.com/oauth/token \
   --authorization-url https://my-idp.com/authorize \
+  --callback-url https://my-app-domain.com/oauth2/callback \
   --client-id <client_id> \
   --client-secret-stdin
-```
-### _Authorization Code with PKCE_ grant with custom port
-
-```shell
-doken \
-  --token-url https://my-idp.com/oauth/token \
-  --authorization-url https://my-idp.com/authorize \
-  --client-id <client_id> \
-  --port 8081
 ```
 
 ### _Client credentials_ grant with discovery url
@@ -98,6 +89,7 @@ doken \
 ```shell
 doken \
   --discovery-url https://my-idp.com/.well-known/openid-configuration \
+  --callback-url https://my-app-domain.com/oauth2/callback \
   --client-id <client_id> \
   --client-secret-stdin \
   --grant client-credentials
@@ -109,9 +101,9 @@ doken \
 
 ```shell
 doken \
-  --discovery-url https://my-idp.com/.well-known/openid-configuration \
   --token-url https://my-idp.com/oauth/token \
   --authorization-url https://my-idp.com/authorize \
+  --callback-url https://my-app-domain.com/oauth2/callback \
   --client-id <client_id> \
   --client-secret-stdin \
   --grant implicit

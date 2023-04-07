@@ -30,7 +30,7 @@ impl<'a> OAuthClient<'a> {
             None => None,
         };
 
-        Ok(BasicClient::new(
+        let mut client = BasicClient::new(
             ClientId::new(args.client_id.to_owned()),
             args.client_secret.clone().map(ClientSecret::new),
             AuthUrl::new(authorization_url.to_owned()).with_context(|| {
@@ -40,8 +40,13 @@ impl<'a> OAuthClient<'a> {
                 )
             })?,
             token,
-        )
-        .set_redirect_uri(RedirectUrl::new(args.callback_url.to_owned()).unwrap()))
+        );
+
+        if let Some(callback_url) = &args.callback_url {
+            client = client.set_redirect_uri(RedirectUrl::new(callback_url.to_owned()).unwrap())
+        }
+
+        Ok(client)
     }
 
     pub async fn new(args: &Arguments) -> Result<OAuthClient> {

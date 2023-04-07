@@ -30,7 +30,7 @@ impl<'a> TokenRetriever for AuthorizationCodeWithPKCERetriever<'a> {
 
         let (url, csrf) = self.oauth_client.authorize_url(Some(pkce_challenge));
 
-        let code = AuthBrowser::new(url, Url::parse(&self.args.callback_url)?)?
+        let code = AuthBrowser::new(url, Url::parse(self.args.callback_url.as_deref().unwrap())?)?
             .get_code(self.args.timeout, csrf)
             .await?;
 
