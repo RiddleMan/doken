@@ -76,13 +76,14 @@ impl AuthBrowser {
                     && request_url.path() == callback_url.path()
                 {
                     log::debug!("Received request to `--callback-url` {}", callback_url);
-                    let code = f(event.clone());
+
+                    let response = f(event.clone());
 
                     if let Err(e) = intercept_page
                         .execute(
                             FulfillRequestParams::builder()
                                 .request_id(event.request_id.clone())
-                                .body(BASE64_STANDARD.encode(if code.is_some() {
+                                .body(BASE64_STANDARD.encode(if response.is_some() {
                                     CONTENT_OK
                                 } else {
                                     CONTENT_NOT_OK
@@ -96,8 +97,8 @@ impl AuthBrowser {
                         log::error!("Failed to fullfill request: {e}");
                     }
 
-                    if let Some(code) = code {
-                        let _ = tx_browser.send(code);
+                    if let Some(response) = response {
+                        let _ = tx_browser.send(response);
                         break;
                     }
                 } else if let Err(e) = intercept_page
@@ -119,8 +120,9 @@ impl AuthBrowser {
         page.goto(self.authorization_url.as_str()).await?;
         page.wait_for_navigation().await?;
 
-        let code = tokio::select! {
+        let response = tokio::select! {
             _ = rx_sleep => {
+                log::debug!("Timeout");
                 Err::<TResponse, anyhow::Error>(RequestError::Timeout.into())
             }
             Ok(response) = rx_browser => {
@@ -129,10 +131,10 @@ impl AuthBrowser {
         };
 
         browser.close().await?;
-        let _ = handle.await;
-        let _ = intercept_handle.await;
+        handle.await.unwrap();
+        intercept_handle.await.unwrap();
 
-        code
+        response
     }
 
     pub async fn get_code(&self, timeout: u64, csrf_token: CsrfToken) -> Result<String> {
