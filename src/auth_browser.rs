@@ -1,3 +1,4 @@
+use crate::TokenInfo;
 use anyhow::{anyhow, Result};
 use base64::prelude::BASE64_STANDARD;
 use base64::Engine;
@@ -7,8 +8,10 @@ use chromiumoxide::cdp::browser_protocol::fetch::{
 };
 use futures::StreamExt;
 use oauth2::CsrfToken;
+use std::borrow::Cow;
+use std::ops::Add;
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 use thiserror::Error;
 use tokio::sync::oneshot;
 use url::Url;
@@ -35,7 +38,11 @@ impl AuthBrowser {
         })
     }
 
-    pub async fn get_code(&self, timeout: u64, csrf_token: CsrfToken) -> Result<String> {
+    async fn process_request<TResponse, F>(&self, timeout: u64, f: F) -> Result<TResponse>
+    where
+        TResponse: Send + Clone + Sync + 'static,
+        F: Send + Fn(Arc<EventRequestPaused>) -> Option<TResponse> + 'static,
+    {
         let (tx_browser, rx_browser) = oneshot::channel();
         let (tx_sleep, rx_sleep) = oneshot::channel();
 
@@ -69,30 +76,7 @@ impl AuthBrowser {
                     && request_url.path() == callback_url.path()
                 {
                     log::debug!("Received request to `--callback-url` {}", callback_url);
-                    let state = request_url.query_pairs().find(|qp| qp.0.eq("state"));
-                    let code = request_url.query_pairs().find(|qp| qp.0.eq("code"));
-
-                    let code = match (state, code) {
-                        (Some((_, state)), Some((_, code))) => {
-                            if state == *csrf_token.secret() {
-                                let code = code.to_string();
-                                log::debug!("Given code: {}", code);
-
-                                Some(code)
-                            } else {
-                                log::debug!("Incorrect CSRF token. Ignoring...");
-
-                                None
-                            }
-                        }
-                        _ => {
-                            log::debug!(
-                                "Call to server without a state and/or a code parameter. Ignoring..."
-                            );
-
-                            None
-                        }
-                    };
+                    let code = f(event.clone());
 
                     if let Err(e) = intercept_page
                         .execute(
@@ -137,10 +121,10 @@ impl AuthBrowser {
 
         let code = tokio::select! {
             _ = rx_sleep => {
-                Err::<String, anyhow::Error>(RequestError::Timeout.into())
+                Err::<TResponse, anyhow::Error>(RequestError::Timeout.into())
             }
             Ok(response) = rx_browser => {
-                Ok::<String, anyhow::Error>(response)
+                Ok::<TResponse, anyhow::Error>(response)
             }
         };
 
@@ -149,5 +133,88 @@ impl AuthBrowser {
         let _ = intercept_handle.await;
 
         code
+    }
+
+    pub async fn get_code(&self, timeout: u64, csrf_token: CsrfToken) -> Result<String> {
+        self.process_request(timeout, move |event| {
+            let request_url = Url::parse(&event.request.url).unwrap();
+            let state = request_url.query_pairs().find(|qp| qp.0.eq("state"));
+            let code = request_url.query_pairs().find(|qp| qp.0.eq("code"));
+
+            match (state, code) {
+                (Some((_, state)), Some((_, code))) => {
+                    if state == *csrf_token.secret() {
+                        let code = code.to_string();
+                        log::debug!("Given code: {}", code);
+
+                        Some(code)
+                    } else {
+                        log::debug!("Incorrect CSRF token. Ignoring...");
+
+                        None
+                    }
+                }
+                _ => {
+                    log::debug!(
+                        "Call to server without a state and/or a code parameter. Ignoring..."
+                    );
+
+                    None
+                }
+            }
+        })
+        .await
+    }
+
+    pub async fn get_token_data(&self, timeout: u64, csrf_token: CsrfToken) -> Result<TokenInfo> {
+        self.process_request(timeout, move |event| match event.request.method.as_str() {
+            "POST" => {
+                let body = event.request.post_data.as_ref().unwrap();
+
+                log::info!("This is what we get in POST: {:?}", body);
+                let form_params =
+                    form_urlencoded::parse(body.as_bytes()).collect::<Vec<(Cow<str>, Cow<str>)>>();
+
+                let (_, access_token) = form_params
+                    .iter()
+                    .find(|(name, _value)| name == "access_token")
+                    .expect("Cannot find access_token in the HTTP Post request.");
+
+                let (_, expires_in) = form_params
+                    .iter()
+                    .find(|(name, _value)| name == "expires_in")
+                    .expect("Cannot find expires_in in the HTTP Post request.");
+
+                let (_, state) = form_params
+                    .iter()
+                    .find(|(name, _value)| name == "state")
+                    .expect("Cannot find state in the HTTP Post request.");
+
+                if state == csrf_token.secret() {
+                    Some(TokenInfo {
+                        access_token: access_token.to_string(),
+                        refresh_token: None,
+                        expires: Some(
+                            SystemTime::now().add(Duration::from_secs(
+                                expires_in
+                                    .parse::<u64>()
+                                    .expect("expires_in is an incorrect number"),
+                            )),
+                        ),
+                        scope: None,
+                    })
+                } else {
+                    log::debug!("Incorrect CSRF token. Aborting...");
+
+                    None
+                }
+            }
+            _ => {
+                log::debug!("Call to server without a state and/or a code parameter. Ignoring...");
+
+                None
+            }
+        })
+        .await
     }
 }

@@ -19,7 +19,6 @@ use token_info::TokenInfo;
 
 mod args;
 mod auth_browser;
-mod auth_server;
 mod file_state;
 mod oauth_client;
 mod openidc_discovery;
