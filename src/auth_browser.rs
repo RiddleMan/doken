@@ -6,6 +6,7 @@ use chromiumoxide::browser::{Browser, BrowserConfig};
 use chromiumoxide::cdp::browser_protocol::fetch::{
     ContinueRequestParams, EventRequestPaused, FulfillRequestParams,
 };
+use chromiumoxide::Page;
 use futures::StreamExt;
 use oauth2::CsrfToken;
 use std::borrow::Cow;
@@ -38,6 +39,25 @@ impl AuthBrowser {
         })
     }
 
+    async fn wait_for_first_page(browser: &Browser) -> Result<Page> {
+        // TODO: Possible infinite loop if won't be found
+        loop {
+            tokio::time::sleep(Duration::from_millis(100)).await;
+            let pages = browser.pages().await?;
+
+            match pages.first() {
+                Some(page) => {
+                    let first_page_id = page.target_id();
+
+                    return Ok(browser.get_page(first_page_id.to_owned()).await?);
+                }
+                None => {
+                    continue;
+                }
+            }
+        }
+    }
+
     async fn process_request<TResponse, F>(&self, timeout: u64, f: F) -> Result<TResponse>
     where
         TResponse: Send + Clone + Sync + 'static,
@@ -66,7 +86,7 @@ impl AuthBrowser {
             }
         });
 
-        let page = Arc::new(browser.new_page("about:blank").await?);
+        let page = Arc::new(Self::wait_for_first_page(&browser).await?);
 
         let mut request_paused = page.event_listener::<EventRequestPaused>().await.unwrap();
         let intercept_page = page.clone();
