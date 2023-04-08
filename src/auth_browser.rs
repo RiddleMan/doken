@@ -7,7 +7,7 @@ use chromiumoxide::cdp::browser_protocol::fetch::{
     ContinueRequestParams, EventRequestPaused, FulfillRequestParams,
 };
 use chromiumoxide::handler::viewport::Viewport;
-use chromiumoxide::Page;
+use chromiumoxide::{Handler, Page};
 use futures::StreamExt;
 use oauth2::CsrfToken;
 use std::borrow::Cow;
@@ -64,6 +64,31 @@ impl AuthBrowser {
         }
     }
 
+    async fn launch_browser() -> Result<(Browser, Handler)> {
+        log::debug!("Opening chromium instance");
+        const WIDTH: u32 = 800;
+        const HEIGHT: u32 = 1000;
+        let viewport = Viewport {
+            width: WIDTH,
+            height: HEIGHT,
+            ..Viewport::default()
+        };
+
+        Browser::launch(
+            BrowserConfig::builder()
+                .with_head()
+                .viewport(viewport)
+                .window_size(WIDTH, HEIGHT)
+                .enable_request_intercept()
+                .respect_https_errors()
+                .enable_cache()
+                .build()
+                .map_err(|e| anyhow!(e))?,
+        )
+        .await
+        .map_err(|e| anyhow!(e))
+    }
+
     async fn process_request<TResponse, F>(&self, timeout: u64, f: F) -> Result<TResponse>
     where
         TResponse: Send + Clone + Sync + 'static,
@@ -71,24 +96,7 @@ impl AuthBrowser {
     {
         let (tx_browser, rx_browser) = oneshot::channel();
 
-        log::debug!("Opening chromium instance");
-        let viewport = Viewport {
-            width: 800,
-            height: 1000,
-            ..Viewport::default()
-        };
-        let (mut browser, mut handler) = Browser::launch(
-            BrowserConfig::builder()
-                .with_head()
-                .viewport(viewport)
-                .window_size(800, 1000)
-                .enable_request_intercept()
-                .respect_https_errors()
-                .enable_cache()
-                .build()
-                .map_err(|e| anyhow!(e))?,
-        )
-        .await?;
+        let (mut browser, mut handler) = Self::launch_browser().await?;
 
         let handle = tokio::spawn(async move {
             while let Some(h) = handler.next().await {
