@@ -86,7 +86,6 @@ impl AuthBrowser {
         let handle = tokio::spawn(async move {
             while let Some(h) = handler.next().await {
                 if h.is_err() {
-                    // TODO: Detect that user has closed a browser. Fail immediately
                     log::error!("Handler created an error");
                     break;
                 }
