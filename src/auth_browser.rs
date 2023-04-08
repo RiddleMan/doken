@@ -6,6 +6,8 @@ use chromiumoxide::browser::{Browser, BrowserConfig};
 use chromiumoxide::cdp::browser_protocol::fetch::{
     ContinueRequestParams, EventRequestPaused, FulfillRequestParams,
 };
+use chromiumoxide::handler::viewport::Viewport;
+use chromiumoxide::Page;
 use futures::StreamExt;
 use oauth2::CsrfToken;
 use std::borrow::Cow;
@@ -20,6 +22,9 @@ use url::Url;
 enum RequestError {
     #[error("No requests with required data. Timeout.")]
     Timeout,
+
+    #[error("The user closed the browser")]
+    BrowserClosed,
 }
 
 const CONTENT_OK: &str = "<html><head></head><body><h1>OK</h1></body></html>";
@@ -38,34 +43,63 @@ impl AuthBrowser {
         })
     }
 
+    async fn wait_for_first_page(browser: &Browser) -> Result<Page> {
+        let mut retries = 10;
+        loop {
+            tokio::time::sleep(Duration::from_millis(100)).await;
+            let pages = browser.pages().await?;
+            match (pages.first(), retries) {
+                (Some(page), _) => {
+                    let first_page_id = page.target_id();
+
+                    return Ok(browser.get_page(first_page_id.to_owned()).await?);
+                }
+                (None, 0) => {
+                    return Err(RequestError::Timeout.into());
+                }
+                (None, _) => {
+                    retries -= 1;
+                }
+            }
+        }
+    }
+
     async fn process_request<TResponse, F>(&self, timeout: u64, f: F) -> Result<TResponse>
     where
         TResponse: Send + Clone + Sync + 'static,
         F: Send + Fn(Arc<EventRequestPaused>) -> Option<TResponse> + 'static,
     {
         let (tx_browser, rx_browser) = oneshot::channel();
-        let (tx_sleep, rx_sleep) = oneshot::channel();
 
         log::debug!("Opening chromium instance");
-        let (mut browser, mut _handler) = Browser::launch(
+        let viewport = Viewport {
+            width: 800,
+            height: 1000,
+            ..Viewport::default()
+        };
+        let (mut browser, mut handler) = Browser::launch(
             BrowserConfig::builder()
                 .with_head()
+                .viewport(viewport)
+                .window_size(800, 1000)
                 .enable_request_intercept()
+                .respect_https_errors()
+                .enable_cache()
                 .build()
                 .map_err(|e| anyhow!(e))?,
         )
         .await?;
 
         let handle = tokio::spawn(async move {
-            while let Some(h) = _handler.next().await {
+            while let Some(h) = handler.next().await {
                 if h.is_err() {
+                    log::error!("Handler created an error");
                     break;
                 }
             }
         });
 
-        let page = Arc::new(browser.new_page("about:blank").await?);
-
+        let page = Arc::new(Self::wait_for_first_page(&browser).await?);
         let mut request_paused = page.event_listener::<EventRequestPaused>().await.unwrap();
         let intercept_page = page.clone();
         let callback_url = self.callback_url.to_owned();
@@ -110,29 +144,25 @@ impl AuthBrowser {
             }
         });
 
-        tokio::spawn(async move {
-            tokio::time::sleep(Duration::from_millis(timeout)).await;
-
-            let _ = tx_sleep.send("timeout");
-        });
-
         log::debug!("Opening authorization page {}", self.authorization_url);
         page.goto(self.authorization_url.as_str()).await?;
-        page.wait_for_navigation().await?;
 
         let response = tokio::select! {
-            _ = rx_sleep => {
+            _ = tokio::time::sleep(Duration::from_millis(timeout)) => {
                 log::debug!("Timeout");
                 Err::<TResponse, anyhow::Error>(RequestError::Timeout.into())
             }
             Ok(response) = rx_browser => {
                 Ok::<TResponse, anyhow::Error>(response)
             }
+            _ = handle => {
+                log::debug!("User closed the browser");
+                Err::<TResponse, anyhow::Error>(RequestError::BrowserClosed.into())
+            }
         };
 
-        browser.close().await?;
-        handle.await.unwrap();
-        intercept_handle.await.unwrap();
+        let _ = browser.close().await;
+        let _ = intercept_handle.await;
 
         response
     }
