@@ -6,6 +6,7 @@ use chromiumoxide::browser::{Browser, BrowserConfig};
 use chromiumoxide::cdp::browser_protocol::fetch::{
     ContinueRequestParams, EventRequestPaused, FulfillRequestParams,
 };
+use chromiumoxide::handler::viewport::Viewport;
 use chromiumoxide::Page;
 use futures::StreamExt;
 use oauth2::CsrfToken;
@@ -71,11 +72,15 @@ impl AuthBrowser {
         let (tx_browser, rx_browser) = oneshot::channel();
 
         log::debug!("Opening chromium instance");
+        let mut viewport = Viewport::default();
+        viewport.width = 800;
+        viewport.height = 1000;
         let (mut browser, mut handler) = Browser::launch(
             BrowserConfig::builder()
                 .with_head()
+                .viewport(viewport)
+                .window_size(800, 1000)
                 .enable_request_intercept()
-                .window_size(800, 600)
                 .respect_https_errors()
                 .enable_cache()
                 .build()
@@ -93,7 +98,6 @@ impl AuthBrowser {
         });
 
         let page = Arc::new(Self::wait_for_first_page(&browser).await?);
-
         let mut request_paused = page.event_listener::<EventRequestPaused>().await.unwrap();
         let intercept_page = page.clone();
         let callback_url = self.callback_url.to_owned();
