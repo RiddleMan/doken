@@ -72,9 +72,11 @@ impl AuthBrowser {
         let (tx_browser, rx_browser) = oneshot::channel();
 
         log::debug!("Opening chromium instance");
-        let mut viewport = Viewport::default();
-        viewport.width = 800;
-        viewport.height = 1000;
+        let viewport = Viewport {
+            width: 800,
+            height: 1000,
+            ..Viewport::default()
+        };
         let (mut browser, mut handler) = Browser::launch(
             BrowserConfig::builder()
                 .with_head()
