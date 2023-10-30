@@ -14,7 +14,7 @@ clap = { version = "4.3.19", features = ["env", "derive"] }
 tokio = { version = "1.28.0", features = ["full"] }
 home = "0.5.5"
 url = "2.2.2"
-async-trait = "0.1.57"
+async-trait = "0.1.74"
 mime = "0.3.16"
 oauth2 = { version = "4.3.0", features = ["reqwest"] }
 dotenv = "0.15.0"
