@@ -1,6 +1,6 @@
 [package]
 name = "doken"
-version = "0.3.1"
+version = "0.4.0"
 description = "Tool for getting tokens from OAuth 2.0/OpenID Connect providers"
 edition = "2021"
 
