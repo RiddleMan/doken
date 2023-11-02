@@ -229,28 +229,25 @@ impl Args {
         args
     }
 
-    async fn apply_profile() -> () {
+    async fn apply_profile() {
         let mut cmd: Command = Arguments::command();
         let args: Vec<String> = env::args().collect();
         let profile = match args.iter().position(|arg| arg.eq("--profile")) {
-            Some(profile_pos) => args.get(profile_pos + 1).map(|p| p.clone()),
+            Some(profile_pos) => args.get(profile_pos + 1).cloned(),
             None => None,
         };
 
         let config = ConfigFile::new().apply_profile(profile.clone()).await;
 
-        match config {
-            Err(_) => {
-                cmd.error(
-                    ErrorKind::InvalidValue,
-                    format!(
-                        "--profile `{}` definition cannot be found in ~/.doken/config.toml",
-                        profile.unwrap()
-                    ),
-                )
-                .exit();
-            }
-            Ok(_) => {}
+        if config.is_err() {
+            cmd.error(
+                ErrorKind::InvalidValue,
+                format!(
+                    "--profile `{}` definition cannot be found in ~/.doken/config.toml",
+                    profile.unwrap()
+                ),
+            )
+            .exit();
         }
     }
 

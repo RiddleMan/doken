@@ -99,59 +99,56 @@ impl ConfigFile {
     pub async fn apply_profile(&self, profile: Option<String>) -> Result<()> {
         let config = self.read().await;
 
-        match profile {
-            Some(profile) => {
-                let profile = config
-                    .profile
-                    .get(&profile)
-                    .context(format!("The given profile `{:?}` doesn't exist", profile))?;
+        if let Some(profile) = profile {
+            let profile = config
+                .profile
+                .get(&profile)
+                .context(format!("The given profile `{:?}` doesn't exist", profile))?;
 
-                // TODO: Some macro?
-                if let Some(grant) = &profile.grant {
-                    env::set_var("DOKEN_GRANT", to_variant_name(&grant).unwrap().to_string());
-                }
-
-                if let Some(token_url) = &profile.token_url {
-                    env::set_var("DOKEN_TOKEN_URL", token_url);
-                }
-
-                if let Some(authorization_url) = &profile.authorization_url {
-                    env::set_var("DOKEN_AUTHORIZATION_URL", authorization_url);
-                }
-
-                if let Some(callback_url) = &profile.callback_url {
-                    env::set_var("DOKEN_CALLBACK_URL".to_string(), callback_url);
-                }
-
-                if let Some(client_id) = &profile.client_id {
-                    env::set_var("DOKEN_CLIENT_ID".to_string(), client_id);
-                }
-
-                if let Some(client_secret) = &profile.client_secret {
-                    env::set_var("DOKEN_CLIENT_SECRET".to_string(), client_secret);
-                }
-
-                if let Some(username) = &profile.username {
-                    env::set_var("DOKEN_USERNAME".to_string(), username);
-                }
-
-                if let Some(password) = &profile.password {
-                    env::set_var("DOKEN_PASSWORD".to_string(), password);
-                }
-
-                if let Some(scope) = &profile.scope {
-                    env::set_var("DOKEN_SCOPE".to_string(), scope);
-                }
-
-                if let Some(audience) = &profile.audience {
-                    env::set_var("DOKEN_AUDIENCE".to_string(), audience);
-                }
-
-                if let Some(timeout) = &profile.timeout {
-                    env::set_var("DOKEN_TIMEOUT".to_string(), timeout.to_string());
-                }
+            // TODO: Some macro?
+            if let Some(grant) = &profile.grant {
+                env::set_var("DOKEN_GRANT", to_variant_name(&grant).unwrap());
             }
-            _ => {}
+
+            if let Some(token_url) = &profile.token_url {
+                env::set_var("DOKEN_TOKEN_URL", token_url);
+            }
+
+            if let Some(authorization_url) = &profile.authorization_url {
+                env::set_var("DOKEN_AUTHORIZATION_URL", authorization_url);
+            }
+
+            if let Some(callback_url) = &profile.callback_url {
+                env::set_var("DOKEN_CALLBACK_URL", callback_url);
+            }
+
+            if let Some(client_id) = &profile.client_id {
+                env::set_var("DOKEN_CLIENT_ID", client_id);
+            }
+
+            if let Some(client_secret) = &profile.client_secret {
+                env::set_var("DOKEN_CLIENT_SECRET", client_secret);
+            }
+
+            if let Some(username) = &profile.username {
+                env::set_var("DOKEN_USERNAME", username);
+            }
+
+            if let Some(password) = &profile.password {
+                env::set_var("DOKEN_PASSWORD", password);
+            }
+
+            if let Some(scope) = &profile.scope {
+                env::set_var("DOKEN_SCOPE", scope);
+            }
+
+            if let Some(audience) = &profile.audience {
+                env::set_var("DOKEN_AUDIENCE", audience);
+            }
+
+            if let Some(timeout) = &profile.timeout {
+                env::set_var("DOKEN_TIMEOUT", timeout.to_string());
+            }
         }
 
         Ok(())
