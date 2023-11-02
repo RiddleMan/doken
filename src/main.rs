@@ -1,6 +1,7 @@
 #![deny(warnings)]
 
 use crate::args::Args;
+use crate::config_file::ConfigFile;
 use crate::file_state::FileState;
 use crate::grant::Grant;
 use crate::oauth_client::OAuthClient;
@@ -19,11 +20,11 @@ use token_info::TokenInfo;
 
 mod args;
 mod auth_browser;
+mod config_file;
 mod file_state;
 mod grant;
 mod oauth_client;
 mod openidc_discovery;
-mod profile_file_parser;
 mod retrievers;
 mod token_info;
 
@@ -37,6 +38,9 @@ fn enable_debug_via_args() {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    let config = ConfigFile::new().read().await;
+
+    println!("Parsed file {:?}", config);
     enable_debug_via_args();
     env_logger::init();
 
@@ -57,7 +61,7 @@ async fn main() -> Result<()> {
     }
 
     let retriever: Box<dyn TokenRetriever> = match args.grant {
-        Grant::AuthorizationCodeWithPKCE { .. } => Box::new(
+        Grant::AuthorizationCodeWithPkce { .. } => Box::new(
             AuthorizationCodeWithPKCERetriever::new(&args, &oauth_client),
         ),
         Grant::AuthorizationCode { .. } => {

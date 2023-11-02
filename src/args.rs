@@ -19,7 +19,7 @@ use crate::grant::Grant;
 ))]
 pub struct Arguments {
     /// Authentication Grant
-    #[clap(long, value_enum, default_value_t = Grant::AuthorizationCodeWithPKCE, env = "DOKEN_GRANT")]
+    #[clap(long, value_enum, default_value_t = Grant::AuthorizationCodeWithPkce, env = "DOKEN_GRANT")]
     pub grant: Grant,
 
     /// OAuth 2.0 token exchange url
@@ -114,7 +114,7 @@ impl Args {
         let mut cmd: Command = Arguments::command();
 
         match args.grant {
-            Grant::AuthorizationCodeWithPKCE { .. } => {
+            Grant::AuthorizationCodeWithPkce { .. } => {
                 Self::assert_urls_for_authorization_grants(args);
             }
             Grant::AuthorizationCode { .. } => {

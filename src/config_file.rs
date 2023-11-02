@@ -1,4 +1,5 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, path::PathBuf};
+use tokio::fs;
 
 use serde::{Deserialize, Serialize};
 
@@ -46,4 +47,36 @@ pub struct Profile {
 #[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct Config {
     pub profile: HashMap<String, Profile>,
+}
+
+pub struct ConfigFile {
+    file_path: PathBuf,
+}
+
+impl ConfigFile {
+    pub fn new() -> ConfigFile {
+        let home_path = match home::home_dir() {
+            Some(mut home_dir) => {
+                home_dir.push(".doken/config.toml");
+                home_dir
+            }
+
+            None => panic!("Couldn't access $HOME_DIR"),
+        };
+
+        ConfigFile {
+            file_path: home_path,
+        }
+    }
+
+    pub async fn read(&self) -> Config {
+        log::debug!("Reading the state file");
+        let text = fs::read_to_string(&self.file_path)
+            .await
+            .unwrap_or_default();
+
+        println!("File {:?}", text);
+
+        toml::from_str::<Config>(&text).unwrap()
+    }
 }
