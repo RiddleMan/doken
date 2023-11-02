@@ -1,7 +1,10 @@
+use std::ffi::OsString;
+
 use clap::error::ErrorKind;
 use clap::{ArgGroup, Command, CommandFactory, Parser};
 use dotenv::dotenv;
 
+use crate::config_file::ConfigFile;
 use crate::grant::Grant;
 
 #[derive(Parser, Debug)]
@@ -222,15 +225,27 @@ impl Args {
         args
     }
 
-    pub fn parse() -> Arguments {
+    pub async fn parse() -> Arguments {
         log::debug!("Parsing application arguments...");
         if dotenv().is_ok() {
             log::debug!(".env file found");
         } else {
             log::debug!(".env file not found. skipping...");
         }
+        let config = ConfigFile::new().read().await;
 
-        let args = Arguments::parse();
+        let os_args: Vec<OsString> = std::env::args_os().collect();
+        let arg0 = os_args.first().unwrap();
+        let mut arg_rest = os_args[1..].to_vec();
+
+        let mut profile_config: Vec<OsString> = config.profile["auth0"].clone().into();
+
+        let mut combined_arguments: Vec<OsString> = Vec::new();
+        combined_arguments.push(arg0.clone());
+        combined_arguments.append(&mut profile_config);
+        combined_arguments.append(&mut arg_rest);
+
+        let args = Arguments::parse_from(combined_arguments.iter());
         Self::assert_grant_specific_arguments(&args);
         let mut args = Self::parse_client_secret(args);
         args = Self::parse_password(args);

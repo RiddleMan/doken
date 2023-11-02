@@ -1,7 +1,9 @@
-use std::{collections::HashMap, path::PathBuf};
+use anyhow::anyhow;
+use std::{collections::HashMap, ffi::OsString, path::PathBuf};
 use tokio::fs;
 
 use serde::{Deserialize, Serialize};
+use serde_variant::to_variant_name;
 
 use crate::grant::Grant;
 
@@ -49,6 +51,80 @@ pub struct Config {
     pub profile: HashMap<String, Profile>,
 }
 
+impl Into<Vec<OsString>> for Profile {
+    fn into(self) -> Vec<OsString> {
+        let mut res: Vec<OsString> = Vec::new();
+
+        // TODO: Some macro?
+        if let Some(grant) = self.grant {
+            res.append(&mut vec![
+                "--grant".to_string().into(),
+                to_variant_name(&grant).unwrap().to_string().into(),
+            ]);
+        }
+
+        if let Some(token_url) = self.token_url {
+            res.append(&mut vec![
+                "--token-url".to_string().into(),
+                token_url.into(),
+            ]);
+        }
+
+        if let Some(authorization_url) = self.authorization_url {
+            res.append(&mut vec![
+                "--authorization-url".to_string().into(),
+                authorization_url.into(),
+            ]);
+        }
+
+        if let Some(callback_url) = self.callback_url {
+            res.append(&mut vec![
+                "--callback-url".to_string().into(),
+                callback_url.into(),
+            ]);
+        }
+
+        if let Some(client_id) = self.client_id {
+            res.append(&mut vec![
+                "--client-id".to_string().into(),
+                client_id.into(),
+            ]);
+        }
+
+        if let Some(client_secret) = self.client_secret {
+            res.append(&mut vec![
+                "--client-secret".to_string().into(),
+                client_secret.into(),
+            ]);
+        }
+
+        if let Some(username) = self.username {
+            res.append(&mut vec!["--username".to_string().into(), username.into()]);
+        }
+
+        if let Some(password) = self.password {
+            res.append(&mut vec!["--password".to_string().into(), password.into()]);
+        }
+
+        if let Some(scope) = self.scope {
+            res.append(&mut vec!["--scope".to_string().into(), scope.into()]);
+        }
+
+        if let Some(audience) = self.audience {
+            res.append(&mut vec!["--audience".to_string().into(), audience.into()]);
+        }
+
+        if let Some(timeout) = self.timeout {
+            res.append(&mut vec![
+                "--timeout".to_string().into(),
+                timeout.to_string().into(),
+            ]);
+        }
+
+        res
+    }
+}
+
 pub struct ConfigFile {
     file_path: PathBuf,
 }
@@ -77,6 +153,15 @@ impl ConfigFile {
 
         println!("File {:?}", text);
 
-        toml::from_str::<Config>(&text).unwrap()
+        let profile = HashMap::new();
+        toml::from_str::<Config>(&text).unwrap_or_else(|e| {
+            log::warn!(
+                "Cannot parse config file {}. Error: {:?}",
+                &self.file_path.to_string_lossy(),
+                anyhow!(e)
+            );
+
+            Config { profile }
+        })
     }
 }

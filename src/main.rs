@@ -1,7 +1,6 @@
 #![deny(warnings)]
 
 use crate::args::Args;
-use crate::config_file::ConfigFile;
 use crate::file_state::FileState;
 use crate::grant::Grant;
 use crate::oauth_client::OAuthClient;
@@ -38,13 +37,10 @@ fn enable_debug_via_args() {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let config = ConfigFile::new().read().await;
-
-    println!("Parsed file {:?}", config);
     enable_debug_via_args();
     env_logger::init();
 
-    let args = Args::parse();
+    let args = Args::parse().await;
 
     let file_state = FileState::new();
     let oauth_client = OAuthClient::new(&args).await?;
