@@ -3,6 +3,13 @@ name = "doken"
 version = "0.4.1"
 description = "Tool for getting tokens from OAuth 2.0/OpenID Connect providers"
 edition = "2021"
+repository = "https://github.com/RiddleMan/doken"
+authors = ["Artur Ptaszek <artur@ptaszek.dev>"]
+license = "MIT"
+
+[package.metadata.wix]
+upgrade-guid = "EE97BA4C-8E20-4136-A4E7-9994FCB22838"
+path-guid = "8705AAFD-B589-4D5A-950B-83399E700532"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -30,3 +37,25 @@ base64 = "0.21.0"
 multer = "2.1.0"
 toml = "0.8.6"
 serde_variant = "0.1.2"
+
+# The profile that 'cargo dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
+
+# Config for 'cargo dist'
+[workspace.metadata.dist]
+# The preferred cargo-dist version to use in CI (Cargo.toml SemVer syntax)
+cargo-dist-version = "0.4.2"
+# CI backends to support
+ci = ["github"]
+# The installers to generate for each app
+installers = ["shell", "powershell", "homebrew", "msi"]
+# A GitHub repo to push Homebrew formulas to
+tap = "RiddleMan/homebrew-tap"
+# Target platforms to build apps for (Rust target-triple syntax)
+targets = ["x86_64-unknown-linux-gnu", "aarch64-apple-darwin", "x86_64-apple-darwin", "x86_64-unknown-linux-musl", "x86_64-pc-windows-msvc"]
+# Publish jobs to run in CI
+publish-jobs = ["homebrew"]
+# Publish jobs to run in CI
+pr-run-mode = "plan"
