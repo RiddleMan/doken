@@ -1,8 +1,8 @@
 #![deny(warnings)]
 
 use crate::args::Args;
-use crate::args::Grant;
 use crate::file_state::FileState;
+use crate::grant::Grant;
 use crate::oauth_client::OAuthClient;
 use crate::retrievers::authorization_code_retriever::AuthorizationCodeRetriever;
 use crate::retrievers::authorization_code_with_pkce_retriever::AuthorizationCodeWithPKCERetriever;
@@ -19,7 +19,9 @@ use token_info::TokenInfo;
 
 mod args;
 mod auth_browser;
+mod config_file;
 mod file_state;
+mod grant;
 mod oauth_client;
 mod openidc_discovery;
 mod retrievers;
@@ -38,7 +40,7 @@ async fn main() -> Result<()> {
     enable_debug_via_args();
     env_logger::init();
 
-    let args = Args::parse();
+    let args = Args::parse().await;
 
     let file_state = FileState::new();
     let oauth_client = OAuthClient::new(&args).await?;
@@ -55,7 +57,7 @@ async fn main() -> Result<()> {
     }
 
     let retriever: Box<dyn TokenRetriever> = match args.grant {
-        Grant::AuthorizationCodeWithPKCE { .. } => Box::new(
+        Grant::AuthorizationCodeWithPkce { .. } => Box::new(
             AuthorizationCodeWithPKCERetriever::new(&args, &oauth_client),
         ),
         Grant::AuthorizationCode { .. } => {

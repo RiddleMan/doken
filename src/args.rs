@@ -1,20 +1,11 @@
+use std::env;
+
 use clap::error::ErrorKind;
-use clap::{ArgGroup, Command, CommandFactory, Parser, ValueEnum};
+use clap::{ArgGroup, Command, CommandFactory, Parser};
 use dotenv::dotenv;
 
-#[derive(ValueEnum, Clone, Debug)]
-pub enum Grant {
-    /// Authorization code with PKCE Grant. More: <https://www.rfc-editor.org/rfc/rfc7636>
-    AuthorizationCodeWithPKCE,
-    /// Authorization Code Grant. More: <https://www.rfc-editor.org/rfc/rfc6749#section-4.1>
-    AuthorizationCode,
-    /// Implicit Grant. More: <https://www.rfc-editor.org/rfc/rfc6749#section-4.2>
-    Implicit,
-    /// Resource Owner Client Credentials Grant. More: <https://www.rfc-editor.org/rfc/rfc6749#section-4.3>
-    ResourceOwnerPasswordClientCredentials,
-    /// Client credentials Grant. More: <https://www.rfc-editor.org/rfc/rfc6749#section-4.4>
-    ClientCredentials,
-}
+use crate::config_file::ConfigFile;
+use crate::grant::Grant;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about)]
@@ -31,7 +22,7 @@ pub enum Grant {
 ))]
 pub struct Arguments {
     /// Authentication Grant
-    #[clap(long, value_enum, default_value_t = Grant::AuthorizationCodeWithPKCE, env = "DOKEN_GRANT")]
+    #[clap(long, value_enum, default_value_t = Grant::AuthorizationCodeWithPkce, env = "DOKEN_GRANT")]
     pub grant: Grant,
 
     /// OAuth 2.0 token exchange url
@@ -93,6 +84,10 @@ pub struct Arguments {
     /// Add diagnostics info
     #[clap(short, long, action, default_value_t = false)]
     pub debug: bool,
+
+    /// Profile defined in ~/.doken/config.toml file
+    #[clap(long)]
+    pub profile: Option<String>,
 }
 
 pub struct Args;
@@ -126,7 +121,7 @@ impl Args {
         let mut cmd: Command = Arguments::command();
 
         match args.grant {
-            Grant::AuthorizationCodeWithPKCE { .. } => {
+            Grant::AuthorizationCodeWithPkce { .. } => {
                 Self::assert_urls_for_authorization_grants(args);
             }
             Grant::AuthorizationCode { .. } => {
@@ -234,13 +229,37 @@ impl Args {
         args
     }
 
-    pub fn parse() -> Arguments {
+    async fn apply_profile() {
+        let mut cmd: Command = Arguments::command();
+        let args: Vec<String> = env::args().collect();
+        let profile = match args.iter().position(|arg| arg.eq("--profile")) {
+            Some(profile_pos) => args.get(profile_pos + 1).cloned(),
+            None => None,
+        };
+
+        let config = ConfigFile::new().apply_profile(profile.clone()).await;
+
+        if config.is_err() {
+            cmd.error(
+                ErrorKind::InvalidValue,
+                format!(
+                    "--profile `{}` definition cannot be found in ~/.doken/config.toml",
+                    profile.unwrap()
+                ),
+            )
+            .exit();
+        }
+    }
+
+    pub async fn parse() -> Arguments {
         log::debug!("Parsing application arguments...");
         if dotenv().is_ok() {
             log::debug!(".env file found");
         } else {
             log::debug!(".env file not found. skipping...");
         }
+
+        Self::apply_profile().await;
 
         let args = Arguments::parse();
         Self::assert_grant_specific_arguments(&args);
