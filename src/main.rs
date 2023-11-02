@@ -1,8 +1,8 @@
 #![deny(warnings)]
 
 use crate::args::Args;
-use crate::args::Grant;
 use crate::file_state::FileState;
+use crate::grant::Grant;
 use crate::oauth_client::OAuthClient;
 use crate::retrievers::authorization_code_retriever::AuthorizationCodeRetriever;
 use crate::retrievers::authorization_code_with_pkce_retriever::AuthorizationCodeWithPKCERetriever;
@@ -20,6 +20,7 @@ use token_info::TokenInfo;
 mod args;
 mod auth_browser;
 mod file_state;
+mod grant;
 mod oauth_client;
 mod openidc_discovery;
 mod retrievers;

@@ -1,20 +1,8 @@
 use clap::error::ErrorKind;
-use clap::{ArgGroup, Command, CommandFactory, Parser, ValueEnum};
+use clap::{ArgGroup, Command, CommandFactory, Parser};
 use dotenv::dotenv;
 
-#[derive(ValueEnum, Clone, Debug)]
-pub enum Grant {
-    /// Authorization code with PKCE Grant. More: <https://www.rfc-editor.org/rfc/rfc7636>
-    AuthorizationCodeWithPKCE,
-    /// Authorization Code Grant. More: <https://www.rfc-editor.org/rfc/rfc6749#section-4.1>
-    AuthorizationCode,
-    /// Implicit Grant. More: <https://www.rfc-editor.org/rfc/rfc6749#section-4.2>
-    Implicit,
-    /// Resource Owner Client Credentials Grant. More: <https://www.rfc-editor.org/rfc/rfc6749#section-4.3>
-    ResourceOwnerPasswordClientCredentials,
-    /// Client credentials Grant. More: <https://www.rfc-editor.org/rfc/rfc6749#section-4.4>
-    ClientCredentials,
-}
+use crate::grant::Grant;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about)]
