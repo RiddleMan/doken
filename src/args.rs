@@ -1,3 +1,5 @@
+use std::env;
+
 use clap::error::ErrorKind;
 use clap::{ArgGroup, Command, CommandFactory, Parser};
 use dotenv::dotenv;
@@ -229,7 +231,12 @@ impl Args {
 
     async fn apply_profile() -> () {
         let mut cmd: Command = Arguments::command();
-        let profile: Option<String> = "dupa".to_string().into();
+        let args: Vec<String> = env::args().collect();
+        let profile = match args.iter().position(|arg| arg.eq("--profile")) {
+            Some(profile_pos) => args.get(profile_pos + 1).map(|p| p.clone()),
+            None => None,
+        };
+
         let config = ConfigFile::new().apply_profile(profile.clone()).await;
 
         match config {
