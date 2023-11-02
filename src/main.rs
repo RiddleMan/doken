@@ -23,6 +23,7 @@ mod file_state;
 mod grant;
 mod oauth_client;
 mod openidc_discovery;
+mod profile_file_parser;
 mod retrievers;
 mod token_info;
 
