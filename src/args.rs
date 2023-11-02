@@ -1,5 +1,3 @@
-use std::ffi::OsString;
-
 use clap::error::ErrorKind;
 use clap::{ArgGroup, Command, CommandFactory, Parser};
 use dotenv::dotenv;
@@ -84,6 +82,10 @@ pub struct Arguments {
     /// Add diagnostics info
     #[clap(short, long, action, default_value_t = false)]
     pub debug: bool,
+
+    /// Profile defined in ~/.doken/config.toml file
+    #[clap(long)]
+    pub profile: Option<String>,
 }
 
 pub struct Args;
@@ -225,6 +227,26 @@ impl Args {
         args
     }
 
+    async fn apply_profile() -> () {
+        let mut cmd: Command = Arguments::command();
+        let profile: Option<String> = "dupa".to_string().into();
+        let config = ConfigFile::new().apply_profile(profile.clone()).await;
+
+        match config {
+            Err(_) => {
+                cmd.error(
+                    ErrorKind::InvalidValue,
+                    format!(
+                        "--profile `{}` definition cannot be found in ~/.doken/config.toml",
+                        profile.unwrap()
+                    ),
+                )
+                .exit();
+            }
+            Ok(_) => {}
+        }
+    }
+
     pub async fn parse() -> Arguments {
         log::debug!("Parsing application arguments...");
         if dotenv().is_ok() {
@@ -232,20 +254,10 @@ impl Args {
         } else {
             log::debug!(".env file not found. skipping...");
         }
-        let config = ConfigFile::new().read().await;
 
-        let os_args: Vec<OsString> = std::env::args_os().collect();
-        let arg0 = os_args.first().unwrap();
-        let mut arg_rest = os_args[1..].to_vec();
+        Self::apply_profile().await;
 
-        let mut profile_config: Vec<OsString> = config.profile["auth0"].clone().into();
-
-        let mut combined_arguments: Vec<OsString> = Vec::new();
-        combined_arguments.push(arg0.clone());
-        combined_arguments.append(&mut profile_config);
-        combined_arguments.append(&mut arg_rest);
-
-        let args = Arguments::parse_from(combined_arguments.iter());
+        let args = Arguments::parse();
         Self::assert_grant_specific_arguments(&args);
         let mut args = Self::parse_client_secret(args);
         args = Self::parse_password(args);

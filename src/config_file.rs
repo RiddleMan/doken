@@ -1,5 +1,5 @@
-use anyhow::anyhow;
-use std::{collections::HashMap, ffi::OsString, path::PathBuf};
+use anyhow::{anyhow, Context, Result};
+use std::{collections::HashMap, env, path::PathBuf};
 use tokio::fs;
 
 use serde::{Deserialize, Serialize};
@@ -51,80 +51,6 @@ pub struct Config {
     pub profile: HashMap<String, Profile>,
 }
 
-impl Into<Vec<OsString>> for Profile {
-    fn into(self) -> Vec<OsString> {
-        let mut res: Vec<OsString> = Vec::new();
-
-        // TODO: Some macro?
-        if let Some(grant) = self.grant {
-            res.append(&mut vec![
-                "--grant".to_string().into(),
-                to_variant_name(&grant).unwrap().to_string().into(),
-            ]);
-        }
-
-        if let Some(token_url) = self.token_url {
-            res.append(&mut vec![
-                "--token-url".to_string().into(),
-                token_url.into(),
-            ]);
-        }
-
-        if let Some(authorization_url) = self.authorization_url {
-            res.append(&mut vec![
-                "--authorization-url".to_string().into(),
-                authorization_url.into(),
-            ]);
-        }
-
-        if let Some(callback_url) = self.callback_url {
-            res.append(&mut vec![
-                "--callback-url".to_string().into(),
-                callback_url.into(),
-            ]);
-        }
-
-        if let Some(client_id) = self.client_id {
-            res.append(&mut vec![
-                "--client-id".to_string().into(),
-                client_id.into(),
-            ]);
-        }
-
-        if let Some(client_secret) = self.client_secret {
-            res.append(&mut vec![
-                "--client-secret".to_string().into(),
-                client_secret.into(),
-            ]);
-        }
-
-        if let Some(username) = self.username {
-            res.append(&mut vec!["--username".to_string().into(), username.into()]);
-        }
-
-        if let Some(password) = self.password {
-            res.append(&mut vec!["--password".to_string().into(), password.into()]);
-        }
-
-        if let Some(scope) = self.scope {
-            res.append(&mut vec!["--scope".to_string().into(), scope.into()]);
-        }
-
-        if let Some(audience) = self.audience {
-            res.append(&mut vec!["--audience".to_string().into(), audience.into()]);
-        }
-
-        if let Some(timeout) = self.timeout {
-            res.append(&mut vec![
-                "--timeout".to_string().into(),
-                timeout.to_string().into(),
-            ]);
-        }
-
-        res
-    }
-}
-
 pub struct ConfigFile {
     file_path: PathBuf,
 }
@@ -145,7 +71,7 @@ impl ConfigFile {
         }
     }
 
-    pub async fn read(&self) -> Config {
+    async fn read(&self) -> Config {
         log::debug!("Reading the state file");
         let text = fs::read_to_string(&self.file_path)
             .await
@@ -163,5 +89,66 @@ impl ConfigFile {
 
             Config { profile }
         })
+    }
+
+    pub async fn apply_profile(&self, profile: Option<String>) -> Result<()> {
+        let config = self.read().await;
+
+        match profile {
+            Some(profile) => {
+                let profile = config
+                    .profile
+                    .get(&profile)
+                    .context(format!("The given profile `{:?}` doesn't exist", profile))?;
+
+                // TODO: Some macro?
+                if let Some(grant) = &profile.grant {
+                    env::set_var("DOKEN_GRANT", to_variant_name(&grant).unwrap().to_string());
+                }
+
+                if let Some(token_url) = &profile.token_url {
+                    env::set_var("DOKEN_TOKEN_URL", token_url);
+                }
+
+                if let Some(authorization_url) = &profile.authorization_url {
+                    env::set_var("DOKEN_AUTHORIZATION_URL", authorization_url);
+                }
+
+                if let Some(callback_url) = &profile.callback_url {
+                    env::set_var("DOKEN_CALLBACK_URL".to_string(), callback_url);
+                }
+
+                if let Some(client_id) = &profile.client_id {
+                    env::set_var("DOKEN_CLIENT_ID".to_string(), client_id);
+                }
+
+                if let Some(client_secret) = &profile.client_secret {
+                    env::set_var("DOKEN_CLIENT_SECRET".to_string(), client_secret);
+                }
+
+                if let Some(username) = &profile.username {
+                    env::set_var("DOKEN_USERNAME".to_string(), username);
+                }
+
+                if let Some(password) = &profile.password {
+                    env::set_var("DOKEN_PASSWORD".to_string(), password);
+                }
+
+                if let Some(scope) = &profile.scope {
+                    env::set_var("DOKEN_SCOPE".to_string(), scope);
+                }
+
+                if let Some(audience) = &profile.audience {
+                    env::set_var("DOKEN_AUDIENCE".to_string(), audience);
+                }
+
+                if let Some(timeout) = &profile.timeout {
+                    env::set_var("DOKEN_TIMEOUT".to_string(), timeout.to_string());
+                }
+            }
+            _ => {}
+        }
+
+        Ok(())
     }
 }
