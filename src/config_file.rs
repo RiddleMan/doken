@@ -73,22 +73,27 @@ impl ConfigFile {
 
     async fn read(&self) -> Config {
         log::debug!("Reading the state file");
-        let text = fs::read_to_string(&self.file_path)
-            .await
-            .unwrap_or_default();
-
-        println!("File {:?}", text);
+        let text = fs::read_to_string(&self.file_path).await.context(format!(
+            "Cannot access {}",
+            self.file_path.to_string_lossy()
+        ));
 
         let profile = HashMap::new();
-        toml::from_str::<Config>(&text).unwrap_or_else(|e| {
-            log::warn!(
-                "Cannot parse config file {}. Error: {:?}",
-                &self.file_path.to_string_lossy(),
-                anyhow!(e)
-            );
+        match text {
+            Ok(text) => toml::from_str::<Config>(&text).unwrap_or_else(|e| {
+                log::warn!(
+                    "Cannot parse config file {}. Error: {:?}",
+                    &self.file_path.to_string_lossy(),
+                    anyhow!(e)
+                );
 
-            Config { profile }
-        })
+                Config { profile }
+            }),
+            Err(e) => {
+                log::warn!("{}", e);
+                Config { profile }
+            }
+        }
     }
 
     pub async fn apply_profile(&self, profile: Option<String>) -> Result<()> {
