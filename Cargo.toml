@@ -5,7 +5,6 @@ description = "Tool for getting tokens from OAuth 2.0/OpenID Connect providers"
 edition = "2021"
 repository = "https://github.com/RiddleMan/doken"
 authors = ["Artur Ptaszek <artur@ptaszek.dev>"]
-license = "MIT"
 
 [package.metadata.wix]
 upgrade-guid = "EE97BA4C-8E20-4136-A4E7-9994FCB22838"
