@@ -108,7 +108,7 @@ impl<'a> OAuthClient<'a> {
         let nonce = Alphanumeric.sample_string(&mut rand::thread_rng(), 16);
         let mut builder = self.authorization_url_builder();
 
-        builder = builder.add_extra_param("nonce", nonce);
+        builder = builder.add_extra_param("nonce", nonce.clone());
 
         if let Some(challenge) = pkce_challenge {
             builder = builder.set_pkce_challenge(challenge);
