@@ -224,7 +224,7 @@ Running the command in any of the authorization grants could result in one of th
 
 Location varies between operating systems:
 
-- Windows - _C:\Users\<your_username>\.doken\config.toml_
+- Windows - _C:\\Users\\<your_username>\\.doken\\config.toml_
 - Mac - _/Users/<your_username>/.doken/config.toml_
 - Linux - _/home/<your_username>/.doken/config.toml_
 
