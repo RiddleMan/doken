@@ -8,6 +8,7 @@ use oauth2::{
     PkceCodeChallenge, PkceCodeVerifier, RedirectUrl, RefreshToken, ResourceOwnerPassword,
     ResourceOwnerUsername, Scope, TokenUrl,
 };
+use rand::distributions::{Alphanumeric, DistString};
 use url::Url;
 
 pub struct OAuthClient<'a> {
@@ -91,8 +92,6 @@ impl<'a> OAuthClient<'a> {
         let mut builder = self
             .inner
             .authorize_url(CsrfToken::new_random)
-            // TODO: Generate cryptographic strong NONCE
-            .add_extra_param("nonce", "NONCE")
             .add_scope(Scope::new(self.args.scope.to_string()));
 
         if let Some(ref aud) = self.args.audience {
@@ -102,14 +101,22 @@ impl<'a> OAuthClient<'a> {
         builder
     }
 
-    pub fn authorize_url(&self, pkce_challenge: Option<PkceCodeChallenge>) -> (Url, CsrfToken) {
+    pub fn authorize_url(
+        &self,
+        pkce_challenge: Option<PkceCodeChallenge>,
+    ) -> (Url, CsrfToken, String) {
+        let nonce = Alphanumeric.sample_string(&mut rand::thread_rng(), 16);
         let mut builder = self.authorization_url_builder();
+
+        builder = builder.add_extra_param("nonce", nonce);
 
         if let Some(challenge) = pkce_challenge {
             builder = builder.set_pkce_challenge(challenge);
         }
 
-        builder.url()
+        let (url, csrf) = builder.url();
+
+        (url, csrf, nonce)
     }
 
     pub fn implicit_url(&self) -> (Url, CsrfToken) {
