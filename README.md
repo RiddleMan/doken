@@ -40,7 +40,6 @@ export DOKEN_AUTHORIZATION_URL=https://my-idp.com/authorize
 export DOKEN_CALLBACK_URL=https://my-app-domain.com/oauth2/callback
 export DOKEN_CLIENT_ID=<client_id>
 export DOKEN_SECRET_ID=<client_secret>
-export DOKEN_PORT=8081
 export DOKEN_GRANT=authorization-code
 
 doken
@@ -56,7 +55,6 @@ DOKEN_AUTHORIZATION_URL=https://my-idp.com/authorize
 DOKEN_CALLBACK_URL=https://my-app-domain.com/oauth2/callback
 DOKEN_CLIENT_ID=<client_id>
 DOKEN_SECRET_ID=<client_secret>
-DOKEN_PORT=8081
 DOKEN_GRANT=authorization-code
 ```
 
