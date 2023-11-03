@@ -1,5 +1,5 @@
 # doken
-[![Rust](https://github.com/RiddleMan/doken/actions/workflows/rust.yml/badge.svg)](https://github.com/RiddleMan/doken/actions/workflows/rust.yml)
+[![Rust](https://github.com/RiddleMan/doken/actions/workflows/rust.yml/badge.svg)](https://github.com/RiddleMan/doken/actions/workflows/rust.yml) [![dependency status](https://deps.rs/repo/github/RiddleMan/doken/status.svg)](https://deps.rs/repo/github/RiddleMan/doken)
 
 Tool for getting tokens from OAuth 2.0/OpenID Connect providers.
 
