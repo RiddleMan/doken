@@ -8,10 +8,30 @@ Tool for getting tokens from OAuth 2.0/OpenID Connect providers.
 * Refreshing token without opening a browser if IdP provides _refresh_token_
 * Reading options from CLI Arguments, Environment variables, _.env_ file
 
+## Prerequisites
+
+- Chromium-based browser (Edge, Chromium, Chrome)
+
 ## Installation
 
-```shell
-brew tap RiddleMan/tap && brew install doken
+### Install pre-built binaries via shell script
+
+```sh
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/RiddleMan/doken/releases/latest/download/doken-installer.sh | sh
+```
+
+### Install pre-built binaries via PowerShell script
+
+Ensure you run this command in [Adminstrative shell](https://www.howtogeek.com/194041/how-to-open-the-command-prompt-as-administrator-in-windows-10/).
+
+```sh
+Set-ExecutionPolicy Bypass -Scope Process -Force; irm https://github.com/RiddleMan/doken/releases/latest/download/doken-installer.ps1 | iex
+```
+
+### Install pre-built binaries via Homebrew
+
+```sh
+brew install RiddleMan/homebrew-tap/doken
 ```
 
 ## Usage
@@ -178,6 +198,15 @@ doken \
   --grant resource-owner-password-client-credentials
 ```
 
+## Arguments priority
+
+Doken gathers arguments to the command from various sources. Here's the list of least prioritized to the most, meaning that the last one overwrites values of the previous ones.
+
+1. _.env_ file
+2. Environment variables ex. _DOKEN_CLIENT_ID=<client_id>_
+3. Profiles from _~/.doken/config.toml_
+4. Command arguments ex. _--client-id <client_id>_
+
 ## Token refresh details
 
 The command tries to open a browser as rarely as possible. To achieve that the state (`~/.doken.json`) and refresh logic has been implemented.
@@ -188,6 +217,16 @@ Running the command in any of the authorization grants could result in one of th
 2. If _access_token_ is available in the state, and it's valid, then output to the user
 3. If _access_token_ is invalid and _refresh_token_ exists and it's valid, then refresh token, save in the state and output to the user
 4. If _access_token_ and _refresh_token_ are invalid, then remove state and use case no. 1
+
+## Frequently asked questions
+
+### Can't find a correct location of `config.toml`
+
+Location varies between operating systems:
+
+- Windows - _C:\Users\<your_username>\.doken\config.toml_
+- Mac - _/Users/<your_username>/.doken\config.toml_
+- Linux - _/home/<your_username>/.doken\config.toml_
 
 ## License
 `doken` is under the terms of the MIT License.
