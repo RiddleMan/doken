@@ -40,7 +40,6 @@ export DOKEN_AUTHORIZATION_URL=https://my-idp.com/authorize
 export DOKEN_CALLBACK_URL=https://my-app-domain.com/oauth2/callback
 export DOKEN_CLIENT_ID=<client_id>
 export DOKEN_SECRET_ID=<client_secret>
-export DOKEN_PORT=8081
 export DOKEN_GRANT=authorization-code
 
 doken
@@ -56,7 +55,6 @@ DOKEN_AUTHORIZATION_URL=https://my-idp.com/authorize
 DOKEN_CALLBACK_URL=https://my-app-domain.com/oauth2/callback
 DOKEN_CLIENT_ID=<client_id>
 DOKEN_SECRET_ID=<client_secret>
-DOKEN_PORT=8081
 DOKEN_GRANT=authorization-code
 ```
 
@@ -64,6 +62,63 @@ Then retrieving a token goes like this:
 
 ```shell
 doken
+```
+
+### Saving multiple IdP profiles in ~/.doken/config.toml file
+
+The tool allows you to store multiple profiles in TOML file like so:
+
+```toml
+# File ~/.doken/config.toml
+
+# Example of all possible values
+[profile.first_profile]
+client_id = "<client_id>"
+client_secret = "<client_secret>"
+audience = "https://my-app-domain.com/api"
+scope = "email profile"
+authorization_url = "https://my-idp.com/authorize"
+token_url = "https://my-idp.com/oauth/token"
+callback_url = "https://my-app-domain.com/oauth2/callback"
+grant = "authorization-code-with-pkce"
+
+# Example of partially filled profile
+[profile.second_profile]
+discovery_url = "https://my-idp.com/discovery"
+callback_url = "https://my-app-domain.com/oauth2/callback"
+grant = "authorization-code-with-pkce"
+```
+
+To authorize against first profile you type:
+
+
+```shell
+doken --profile first_profile
+```
+
+To use second profile with different client_id/client_secret pair you execute:
+
+```shell
+doken --profile second_profile --client-id <client_id> --client-secret-stdin
+```
+
+There's even option to overwrite some of settings defined in profile by providing an argument in command line:
+
+```shell
+doken --profile first_profile --client-id <different_client_id>
+```
+
+If some option is required, but wasn't provided the tool will error:
+
+```shell
+$ doken --profile second_profile
+
+error: the following required arguments were not provided:
+  --client-id <CLIENT_ID>
+
+Usage: doken --client-id <CLIENT_ID> --profile <PROFILE> --grant <GRANT> --callback-url <CALLBACK_URL>
+
+For more information, try '--help'.
 ```
 
 ### Usage with cURL
