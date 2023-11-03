@@ -36,6 +36,7 @@ base64 = "0.21.0"
 multer = "2.1.0"
 toml = "0.8.6"
 serde_variant = "0.1.2"
+rand = "0.8.5"
 
 # The profile that 'cargo dist' will build with
 [profile.dist]

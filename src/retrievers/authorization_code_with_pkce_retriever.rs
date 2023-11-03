@@ -28,7 +28,7 @@ impl<'a> TokenRetriever for AuthorizationCodeWithPKCERetriever<'a> {
     async fn retrieve(&self) -> Result<TokenInfo> {
         let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
 
-        let (url, csrf) = self.oauth_client.authorize_url(Some(pkce_challenge));
+        let (url, csrf, _nonce) = self.oauth_client.authorize_url(Some(pkce_challenge));
 
         let code = AuthBrowser::new(url, Url::parse(self.args.callback_url.as_deref().unwrap())?)?
             .get_code(self.args.timeout, csrf)

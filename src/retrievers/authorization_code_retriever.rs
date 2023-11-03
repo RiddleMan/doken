@@ -25,7 +25,7 @@ impl<'a> AuthorizationCodeRetriever<'a> {
 #[async_trait(?Send)]
 impl<'a> TokenRetriever for AuthorizationCodeRetriever<'a> {
     async fn retrieve(&self) -> Result<TokenInfo> {
-        let (url, csrf) = self.oauth_client.authorize_url(None);
+        let (url, csrf, _nonce) = self.oauth_client.authorize_url(None);
 
         let code = AuthBrowser::new(url, Url::parse(self.args.callback_url.as_deref().unwrap())?)?
             .get_code(self.args.timeout, csrf)
