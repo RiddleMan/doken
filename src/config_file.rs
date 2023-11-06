@@ -110,6 +110,10 @@ impl ConfigFile {
                 env::set_var("DOKEN_GRANT", to_variant_name(&grant).unwrap());
             }
 
+            if let Some(discovery_url) = &profile.discovery_url {
+                env::set_var("DOKEN_DISCOVERY_URL", discovery_url);
+            }
+
             if let Some(token_url) = &profile.token_url {
                 env::set_var("DOKEN_TOKEN_URL", token_url);
             }
