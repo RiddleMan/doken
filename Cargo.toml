@@ -37,6 +37,8 @@ base64 = "0.22.0"
 toml = "0.8.10"
 serde_variant = "0.1.2"
 rand = "0.8.5"
+testcontainers = { version = "0.15.0", features = ["tokio"] }
+keycloak = "21.0.102"
 
 # The profile that 'cargo dist' will build with
 [profile.dist]
