@@ -26,7 +26,7 @@ async-trait = "0.1.77"
 oauth2 = { version = "4.3.0", features = ["reqwest"] }
 dotenv = "0.15.0"
 log = "0.4.17"
-env_logger = "0.11.0"
+env_logger = "0.11.2"
 form_urlencoded = "1.1.0"
 rpassword = "7.2.0"
 anyhow = "1.0.80"
