@@ -22,7 +22,7 @@ clap = { version = "4.4.18", features = ["env", "derive"] }
 tokio = { version = "1.36.0", features = ["full"] }
 home = "0.5.5"
 url = "2.2.2"
-async-trait = "0.1.74"
+async-trait = "0.1.77"
 oauth2 = { version = "4.3.0", features = ["reqwest"] }
 dotenv = "0.15.0"
 log = "0.4.17"
