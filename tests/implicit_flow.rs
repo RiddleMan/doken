@@ -1,70 +1,33 @@
-use keycloak::types::{RealmRepresentation, UserRepresentation};
-use ::keycloak::{KeycloakAdmin, KeycloakAdminToken};
+use doken::{get_token, args::Arguments, grant::Grant};
 use testcontainers::clients;
 
-use crate::common::keycloak::Keycloak;
+use crate::common::keycloak_client::KeycloakClient;
 
 mod common;
 
 #[tokio::test]
-async fn it_adds_two() {
+async fn it_authenticates_with_implicit_flow() {
     env_logger::init();
     let docker = clients::Cli::default();
-    let kc_image = Keycloak::default();
+    const REALM_NAME: &str = "test-realm";
+    const USERNAME: &str = "test-user";
+    const PASSWORD: &str = "test-password";
+    const CLIENT_ID: &str = "auth-client-id";
+    let redirect_uris = vec!["http://localhost:3000/oauth/callback".to_owned(), "http://google.com/test/auth".to_owned()];
 
-    let kc = docker.run(kc_image.to_owned());
+    let admin = KeycloakClient::new(&docker).await.unwrap();
+    admin.create_realm(REALM_NAME, USERNAME, PASSWORD, CLIENT_ID, &redirect_uris).await.unwrap();
+    let client_secret = admin.get_client_secret(REALM_NAME, CLIENT_ID).await.unwrap();
 
 
-    let url = format!("http://localhost:{}", kc.get_host_port_ipv4(8080));
+    let pkce_token = get_token(Arguments { 
+        grant: Grant::AuthorizationCodeWithPkce,
+        discovery_url: Some(admin.discovery_url(REALM_NAME)), 
+        callback_url: Some(redirect_uris[0].to_owned()),
+        client_id: CLIENT_ID.to_owned(), 
+        client_secret: Some(client_secret), 
+        ..Default::default()
+    }).await.unwrap();
 
-    let client = reqwest::Client::new();
-    let admin_token = KeycloakAdminToken::acquire(&url, kc_image.username(), kc_image.password(), &client).await.unwrap();
-    let admin = KeycloakAdmin::new(&url, admin_token, client);
-
-    admin
-        .post(RealmRepresentation {
-            realm: Some("test".into()),
-            ..Default::default()
-        })
-        .await
-        .unwrap();
-
-    admin
-        .realm_users_post(
-            "test",
-            UserRepresentation {
-                username: Some("user".into()),
-                ..Default::default()
-            },
-        )
-        .await
-        .unwrap();
-
-    let users = admin
-        .realm_users_get(
-            "test", None, None, None, None, None, None, None, None, None, None, None, None, None,
-            None,
-        )
-        .await
-        .unwrap();
-
-    eprintln!("{:?}", users);
-
-    let id = users
-        .iter()
-        .find(|u| u.username == Some("user".into()))
-        .unwrap()
-        .id
-        .as_ref()
-        .unwrap()
-        .to_string();
-
-    admin
-        .realm_users_with_id_delete("test", id.as_str())
-        .await
-        .unwrap();
-
-    admin.realm_delete("test").await.unwrap();
-
-    assert_eq!(4, 4);
+    assert!(!pkce_token.is_empty());
 }

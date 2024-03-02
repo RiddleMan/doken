@@ -20,7 +20,7 @@ pub mod args;
 mod auth_browser;
 mod config_file;
 mod file_state;
-mod grant;
+pub mod grant;
 mod oauth_client;
 mod openidc_discovery;
 mod retrievers;
