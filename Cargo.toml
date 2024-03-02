@@ -21,7 +21,6 @@ tokio = { version = "1.36.0", features = ["full"] }
 home = "0.5.5"
 url = "2.2.2"
 async-trait = "0.1.74"
-mime = "0.3.16"
 oauth2 = { version = "4.3.0", features = ["reqwest"] }
 dotenv = "0.15.0"
 log = "0.4.17"
@@ -33,7 +32,6 @@ thiserror = "1.0.40"
 chromiumoxide = { git = "https://github.com/mattsse/chromiumoxide", features = ["tokio-runtime"], default-features = false, branch = "main"}
 futures = "0.3.29"
 base64 = "0.22.0"
-multer = "3.0.0"
 toml = "0.8.8"
 serde_variant = "0.1.2"
 rand = "0.8.5"

@@ -1,4 +1,5 @@
 #![deny(warnings)]
+#![deny(unused_crate_dependencies)]
 
 use crate::args::Args;
 use crate::file_state::FileState;
