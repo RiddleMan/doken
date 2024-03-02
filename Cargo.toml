@@ -29,7 +29,7 @@ log = "0.4.17"
 env_logger = "0.11.0"
 form_urlencoded = "1.1.0"
 rpassword = "7.2.0"
-anyhow = "1.0.72"
+anyhow = "1.0.80"
 thiserror = "1.0.40"
 chromiumoxide = { git = "https://github.com/mattsse/chromiumoxide", features = ["tokio-runtime"], default-features = false, branch = "main"}
 futures = "0.3.29"
