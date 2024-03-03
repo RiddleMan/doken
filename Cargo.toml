@@ -34,7 +34,7 @@ thiserror = "1.0.57"
 chromiumoxide = { git = "https://github.com/mattsse/chromiumoxide", features = ["tokio-runtime"], default-features = false, branch = "main"}
 futures = "0.3.30"
 base64 = "0.22.0"
-toml = "0.8.8"
+toml = "0.8.10"
 serde_variant = "0.1.2"
 rand = "0.8.5"
 
