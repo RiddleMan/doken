@@ -21,7 +21,7 @@ serde_json = { version = "1.0.114" }
 clap = { version = "4.5.1", features = ["env", "derive"] }
 tokio = { version = "1.36.0", features = ["full"] }
 home = "0.5.9"
-url = "2.2.2"
+url = "2.5.0"
 async-trait = "0.1.77"
 oauth2 = { version = "4.4.2", features = ["reqwest"] }
 dotenv = "0.15.0"
