@@ -1,5 +1,5 @@
 use crate::args::Arguments;
-use crate::auth_browser::AuthBrowser;
+use crate::auth_browser::auth_browser::AuthBrowser;
 use crate::oauth_client::OAuthClient;
 use crate::token_info::TokenInfo;
 use anyhow::Result;

@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use doken::{args::Arguments, auth_browser::AuthBrowser, get_token, grant::Grant};
+use doken::{args::Arguments, auth_browser::auth_browser::AuthBrowser, get_token, grant::Grant};
 use testcontainers::clients;
 use tokio::time::sleep;
 

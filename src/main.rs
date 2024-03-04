@@ -1,7 +1,7 @@
 #![deny(warnings)]
 
 use doken::args::Args;
-use doken::auth_browser::AuthBrowser;
+use doken::auth_browser::auth_browser::AuthBrowser;
 use doken::get_token;
 use std::env;
 use std::process::exit;

@@ -12,7 +12,7 @@ use crate::retrievers::resource_owner_password_client_credentials_retriever::Res
 use crate::retrievers::token_retriever::TokenRetriever;
 use anyhow::Context;
 use anyhow::Result;
-use auth_browser::AuthBrowser;
+use auth_browser::auth_browser::AuthBrowser;
 use crate::args::Arguments;
 use std::process::exit;
 use crate::token_info::TokenInfo;
