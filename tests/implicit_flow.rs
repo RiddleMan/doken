@@ -31,7 +31,7 @@ async fn it_authenticates_with_implicit_flow() {
         .await
         .unwrap();
 
-    let mut auth_browser = AuthBrowser::new().await.unwrap();
+    let mut auth_browser = AuthBrowser::new(true).await.unwrap();
 
     let page = auth_browser.page().clone();
 

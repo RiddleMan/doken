@@ -6,6 +6,7 @@ use chromiumoxide::browser::{Browser, BrowserConfig};
 use chromiumoxide::cdp::browser_protocol::fetch::{
     ContinueRequestParams, EventRequestPaused, FulfillRequestParams,
 };
+use chromiumoxide::cdp::browser_protocol::target::CreateTargetParamsBuilder;
 use chromiumoxide::handler::viewport::Viewport;
 use chromiumoxide::{Handler, Page};
 use futures::StreamExt;
@@ -37,8 +38,8 @@ pub struct AuthBrowser {
 }
 
 impl AuthBrowser {
-    pub async fn new() -> Result<AuthBrowser> {
-        let (browser, mut handler) = Self::launch_browser().await?;
+    pub async fn new(headless: bool) -> Result<AuthBrowser> {
+        let (browser, mut handler) = Self::launch_browser(headless).await?;
         let (tx, rx) = oneshot::channel::<()>();
 
         tokio::spawn(async move {
@@ -67,7 +68,6 @@ impl AuthBrowser {
 
             log::debug!("Trying to reach the first page...");
             let pages = browser.pages().await?;
-            log::debug!("test");
             match (pages.first(), retries) {
                 (Some(page), _) => {
                     let first_page_id = page.target_id();
@@ -76,8 +76,12 @@ impl AuthBrowser {
                     return Ok(browser.get_page(first_page_id.to_owned()).await?);
                 }
                 (None, 0) => {
-                    log::debug!("Too many retries. Timeout.");
-                    return Err(RequestError::Timeout.into());
+                    log::debug!("Too many retries. Creating new page.");
+                    let page_config = CreateTargetParamsBuilder::default()
+                        .url("about:blank")
+                        .build()
+                        .map_err(|e| anyhow!(e))?;
+                    return browser.new_page(page_config).await.map_err(|e| anyhow!(e));
                 }
                 (None, _) => {
                     log::debug!("Just another try");
@@ -87,7 +91,7 @@ impl AuthBrowser {
         }
     }
 
-    async fn launch_browser() -> Result<(Browser, Handler)> {
+    async fn launch_browser(headless: bool) -> Result<(Browser, Handler)> {
         log::debug!("Opening chromium instance");
         const WIDTH: u32 = 800;
         const HEIGHT: u32 = 1000;
@@ -97,19 +101,22 @@ impl AuthBrowser {
             ..Viewport::default()
         };
 
-        Browser::launch(
-            BrowserConfig::builder()
-                .with_head()
-                .viewport(viewport)
-                .window_size(WIDTH, HEIGHT)
-                .enable_request_intercept()
-                .respect_https_errors()
-                .enable_cache()
-                .build()
-                .map_err(|e| anyhow!(e))?,
-        )
-        .await
-        .map_err(|e| anyhow!(e))
+        let mut config = BrowserConfig::builder();
+
+        if !headless {
+            config = config.with_head();
+        }
+
+        config = config
+            .viewport(viewport)
+            .window_size(WIDTH, HEIGHT)
+            .enable_request_intercept()
+            .respect_https_errors()
+            .enable_cache();
+
+        Browser::launch(config.build().map_err(|e| anyhow!(e))?)
+            .await
+            .map_err(|e| anyhow!(e))
     }
 
     pub fn page(&self) -> Arc<Page> {
