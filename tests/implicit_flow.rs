@@ -37,36 +37,41 @@ async fn it_authenticates_with_implicit_flow() {
 
     tokio::spawn(async move {
         loop {
-            sleep(Duration::from_secs(1)).await;
-            page.find_element(r#"input[name="username"]"#)
-                .await
-                .unwrap()
-                .click()
-                .await
-                .unwrap()
-                .type_str(USERNAME)
-                .await
-                .unwrap();
+            let username_element = page.find_element(r#"input[name="username"]"#).await;
 
-            page.find_element(r#"input[name="password"]"#)
-                .await
-                .unwrap()
-                .click()
-                .await
-                .unwrap()
-                .type_str(PASSWORD)
-                .await
-                .unwrap();
-            page.find_element(r#"input[type="submit"]"#)
-                .await
-                .unwrap()
-                .click()
-                .await
-                .unwrap()
-                .click()
-                .await
-                .unwrap();
-            break;
+            match username_element {
+                Ok(username_element) => {
+                    username_element
+                        .click()
+                        .await
+                        .unwrap()
+                        .type_str(USERNAME)
+                        .await
+                        .unwrap();
+                    page.find_element(r#"input[name="password"]"#)
+                        .await
+                        .unwrap()
+                        .click()
+                        .await
+                        .unwrap()
+                        .type_str(PASSWORD)
+                        .await
+                        .unwrap();
+                    page.find_element(r#"input[type="submit"]"#)
+                        .await
+                        .unwrap()
+                        .click()
+                        .await
+                        .unwrap()
+                        .click()
+                        .await
+                        .unwrap();
+                    break;
+                }
+                Err(_) => {
+                    sleep(Duration::from_secs(1)).await;
+                }
+            }
         }
     });
 
@@ -83,6 +88,8 @@ async fn it_authenticates_with_implicit_flow() {
     )
     .await
     .unwrap();
+
+    print!("{}", pkce_token);
 
     assert!(!pkce_token.is_empty());
 }
