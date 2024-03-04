@@ -70,10 +70,8 @@ impl AuthBrowser {
             let pages = browser.pages().await?;
             match (pages.first(), retries) {
                 (Some(page), _) => {
-                    let first_page_id = page.target_id();
-
                     log::debug!("First page found");
-                    return Ok(browser.get_page(first_page_id.to_owned()).await?);
+                    return Ok(page.to_owned());
                 }
                 (None, 0) => {
                     log::debug!("Too many retries. Creating new page.");
