@@ -11,24 +11,26 @@ use super::token_retriever::TokenRetriever;
 pub struct ImplicitRetriever<'a> {
     args: &'a Arguments,
     oauth_client: &'a OAuthClient<'a>,
+    auth_browser: &'a mut AuthBrowser,
 }
 
 impl<'a> ImplicitRetriever<'a> {
     pub fn new<'b>(
         args: &'b Arguments,
         oauth_client: &'b OAuthClient<'b>,
+        auth_browser: &'b mut AuthBrowser,
     ) -> ImplicitRetriever<'b> {
-        ImplicitRetriever { args, oauth_client }
+        ImplicitRetriever { args, oauth_client, auth_browser }
     }
 }
 
 #[async_trait(?Send)]
 impl<'a> TokenRetriever for ImplicitRetriever<'a> {
-    async fn retrieve(&self) -> Result<TokenInfo> {
+    async fn retrieve(&mut self) -> Result<TokenInfo> {
         let (url, csrf) = self.oauth_client.implicit_url();
 
-        AuthBrowser::new(url, Url::parse(self.args.callback_url.as_deref().unwrap())?)?
-            .get_token_data(self.args.timeout, csrf)
+        self.auth_browser
+            .get_token_data(self.args.timeout,url, Url::parse(self.args.callback_url.as_deref().unwrap())?, csrf)
             .await
     }
 }

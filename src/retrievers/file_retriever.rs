@@ -59,7 +59,7 @@ impl<'a> FileRetriever<'a> {
 
 #[async_trait(?Send)]
 impl<'a> TokenRetriever for FileRetriever<'a> {
-    async fn retrieve(&self) -> Result<TokenInfo> {
+    async fn retrieve(&mut self) -> Result<TokenInfo> {
         let token_info = self.file_state.read_token_info(&self.args.client_id).await;
 
         if token_info.is_none() {

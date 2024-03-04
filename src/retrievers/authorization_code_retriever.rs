@@ -10,6 +10,7 @@ use super::token_retriever::TokenRetriever;
 
 pub struct AuthorizationCodeRetriever<'a> {
     oauth_client: &'a OAuthClient<'a>,
+    auth_browser: &'a mut AuthBrowser,
     args: &'a Arguments,
 }
 
@@ -17,18 +18,25 @@ impl<'a> AuthorizationCodeRetriever<'a> {
     pub fn new<'b>(
         args: &'b Arguments,
         oauth_client: &'b OAuthClient<'b>,
+        auth_browser: &'b mut AuthBrowser,
     ) -> AuthorizationCodeRetriever<'b> {
-        AuthorizationCodeRetriever { oauth_client, args }
+        AuthorizationCodeRetriever { oauth_client, auth_browser, args }
     }
 }
 
 #[async_trait(?Send)]
 impl<'a> TokenRetriever for AuthorizationCodeRetriever<'a> {
-    async fn retrieve(&self) -> Result<TokenInfo> {
+    async fn retrieve(&mut self) -> Result<TokenInfo> {
         let (url, csrf, _nonce) = self.oauth_client.authorize_url(None);
 
-        let code = AuthBrowser::new(url, Url::parse(self.args.callback_url.as_deref().unwrap())?)?
-            .get_code(self.args.timeout, csrf)
+        let code = self
+            .auth_browser
+            .get_code(
+                self.args.timeout,
+                url,
+                Url::parse(self.args.callback_url.as_deref().unwrap())?,
+                csrf,
+            )
             .await?;
 
         let token = self.oauth_client.exchange_code(&code, None).await?;

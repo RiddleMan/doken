@@ -12,6 +12,7 @@ use crate::retrievers::resource_owner_password_client_credentials_retriever::Res
 use crate::retrievers::token_retriever::TokenRetriever;
 use anyhow::Context;
 use anyhow::Result;
+use auth_browser::AuthBrowser;
 use crate::args::Arguments;
 use std::process::exit;
 use crate::token_info::TokenInfo;
@@ -31,7 +32,7 @@ pub async fn get_token(args: Arguments) -> Result<String> {
     let oauth_client = OAuthClient::new(&args).await?;
 
     if !args.force {
-        let file_retriever = FileRetriever::new(&args, &oauth_client);
+        let mut file_retriever = FileRetriever::new(&args, &oauth_client);
 
         let file_token_info = file_retriever.retrieve().await;
 
@@ -41,14 +42,16 @@ pub async fn get_token(args: Arguments) -> Result<String> {
         }
     }
 
-    let retriever: Box<dyn TokenRetriever> = match args.grant {
+    let mut auth_browser = AuthBrowser::new().await?;
+
+    let mut retriever: Box<dyn TokenRetriever> = match args.grant {
         Grant::AuthorizationCodeWithPkce { .. } => Box::new(
-            AuthorizationCodeWithPKCERetriever::new(&args, &oauth_client),
+            AuthorizationCodeWithPKCERetriever::new(&args, &oauth_client, &mut auth_browser),
         ),
         Grant::AuthorizationCode { .. } => {
-            Box::new(AuthorizationCodeRetriever::new(&args, &oauth_client))
+            Box::new(AuthorizationCodeRetriever::new(&args, &oauth_client, &mut auth_browser))
         }
-        Grant::Implicit => Box::new(ImplicitRetriever::new(&args, &oauth_client)),
+        Grant::Implicit => Box::new(ImplicitRetriever::new(&args, &oauth_client, &mut auth_browser)),
         Grant::ResourceOwnerPasswordClientCredentials => Box::new(
             ResourceOwnerPasswordClientCredentialsRetriever::new(&oauth_client),
         ),

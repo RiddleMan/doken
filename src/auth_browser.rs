@@ -31,15 +31,32 @@ const CONTENT_OK: &str = "<html><head></head><body><h1>OK</h1></body></html>";
 const CONTENT_NOT_OK: &str = "<html><head></head><body><h1>NOT OK</h1></body></html>";
 
 pub struct AuthBrowser {
-    authorization_url: Url,
-    callback_url: Url,
+    page: Arc<Page>,
+    browser: Browser,
+    rx_handle: oneshot::Receiver<()>,
 }
 
 impl AuthBrowser {
-    pub fn new(authorization_url: Url, callback_url: Url) -> Result<AuthBrowser> {
+    pub async fn new() -> Result<AuthBrowser> {
+        let (browser, mut handler) = Self::launch_browser().await?;
+        let (tx, rx) = oneshot::channel::<()>();
+
+        tokio::spawn(async move {
+            while let Some(h) = handler.next().await {
+                if h.is_err() {
+                    tx.send(()).unwrap();
+                    log::error!("Handler created an error");
+                    break;
+                }
+            }
+        });
+
+        let page = Arc::new(Self::wait_for_first_page(&browser).await?);
+
         Ok(AuthBrowser {
-            authorization_url,
-            callback_url,
+            page,
+            browser,
+            rx_handle: rx,
         })
     }
 
@@ -47,17 +64,23 @@ impl AuthBrowser {
         let mut retries = 10;
         loop {
             tokio::time::sleep(Duration::from_millis(100)).await;
+
+            log::debug!("Trying to reach the first page...");
             let pages = browser.pages().await?;
+            log::debug!("test");
             match (pages.first(), retries) {
                 (Some(page), _) => {
                     let first_page_id = page.target_id();
 
+                    log::debug!("First page found");
                     return Ok(browser.get_page(first_page_id.to_owned()).await?);
                 }
                 (None, 0) => {
+                    log::debug!("Too many retries. Timeout.");
                     return Err(RequestError::Timeout.into());
                 }
                 (None, _) => {
+                    log::debug!("Just another try");
                     retries -= 1;
                 }
             }
@@ -89,28 +112,29 @@ impl AuthBrowser {
         .map_err(|e| anyhow!(e))
     }
 
-    async fn process_request<TResponse, F>(&self, timeout: u64, f: F) -> Result<TResponse>
+    fn _page(&self) -> Arc<Page> {
+        self.page.clone()
+    }
+
+    async fn process_request<TResponse, F>(
+        &mut self,
+        timeout: u64,
+        authorization_url: Url,
+        callback_url: Url,
+        f: F,
+    ) -> Result<TResponse>
     where
         TResponse: Send + Clone + Sync + 'static,
         F: Send + Fn(Arc<EventRequestPaused>) -> Option<TResponse> + 'static,
     {
         let (tx_browser, rx_browser) = oneshot::channel();
-
-        let (mut browser, mut handler) = Self::launch_browser().await?;
-
-        let handle = tokio::spawn(async move {
-            while let Some(h) = handler.next().await {
-                if h.is_err() {
-                    log::error!("Handler created an error");
-                    break;
-                }
-            }
-        });
-
-        let page = Arc::new(Self::wait_for_first_page(&browser).await?);
-        let mut request_paused = page.event_listener::<EventRequestPaused>().await.unwrap();
-        let intercept_page = page.clone();
-        let callback_url = self.callback_url.to_owned();
+        let mut request_paused = self
+            .page
+            .event_listener::<EventRequestPaused>()
+            .await
+            .unwrap();
+        let intercept_page = self.page.clone();
+        let callback_url = callback_url.to_owned();
         let intercept_handle = tokio::spawn(async move {
             while let Some(event) = request_paused.next().await {
                 let request_url = Url::parse(&event.request.url).unwrap();
@@ -152,8 +176,8 @@ impl AuthBrowser {
             }
         });
 
-        log::debug!("Opening authorization page {}", self.authorization_url);
-        page.goto(self.authorization_url.as_str()).await?;
+        log::debug!("Opening authorization page {}", authorization_url);
+        self.page.goto(authorization_url.as_str()).await?;
 
         let response = tokio::select! {
             _ = tokio::time::sleep(Duration::from_millis(timeout)) => {
@@ -163,20 +187,26 @@ impl AuthBrowser {
             Ok(response) = rx_browser => {
                 Ok::<TResponse, anyhow::Error>(response)
             }
-            _ = handle => {
+            _ = &mut self.rx_handle => {
                 log::debug!("User closed the browser");
                 Err::<TResponse, anyhow::Error>(RequestError::BrowserClosed.into())
             }
         };
 
-        let _ = browser.close().await;
+        let _ = self.browser.close().await;
         let _ = intercept_handle.await;
 
         response
     }
 
-    pub async fn get_code(&self, timeout: u64, csrf_token: CsrfToken) -> Result<String> {
-        self.process_request(timeout, move |event| {
+    pub async fn get_code(
+        &mut self,
+        timeout: u64,
+        authorization_url: Url,
+        callback_url: Url,
+        csrf_token: CsrfToken,
+    ) -> Result<String> {
+        self.process_request(timeout, authorization_url, callback_url, move |event| {
             let request_url = Url::parse(&event.request.url).unwrap();
             let state = request_url.query_pairs().find(|qp| qp.0.eq("state"));
             let code = request_url.query_pairs().find(|qp| qp.0.eq("code"));
@@ -206,55 +236,69 @@ impl AuthBrowser {
         .await
     }
 
-    pub async fn get_token_data(&self, timeout: u64, csrf_token: CsrfToken) -> Result<TokenInfo> {
-        self.process_request(timeout, move |event| match event.request.method.as_str() {
-            "POST" => {
-                let body = event.request.post_data.as_ref().unwrap();
+    pub async fn get_token_data(
+        &mut self,
+        timeout: u64,
+        authorization_url: Url,
+        callback_url: Url,
+        csrf_token: CsrfToken,
+    ) -> Result<TokenInfo> {
+        self.process_request(
+            timeout,
+            authorization_url,
+            callback_url,
+            move |event| match event.request.method.as_str() {
+                "POST" => {
+                    let body = event.request.post_data.as_ref().unwrap();
 
-                log::info!("This is what we get in POST: {:?}", body);
-                let form_params =
-                    form_urlencoded::parse(body.as_bytes()).collect::<Vec<(Cow<str>, Cow<str>)>>();
+                    log::info!("This is what we get in POST: {:?}", body);
+                    let form_params =
+                        form_urlencoded::parse(body.as_bytes())
+                            .collect::<Vec<(Cow<str>, Cow<str>)>>();
 
-                let (_, access_token) = form_params
-                    .iter()
-                    .find(|(name, _value)| name == "access_token")
-                    .expect("Cannot find access_token in the HTTP Post request.");
+                    let (_, access_token) = form_params
+                        .iter()
+                        .find(|(name, _value)| name == "access_token")
+                        .expect("Cannot find access_token in the HTTP Post request.");
 
-                let (_, expires_in) = form_params
-                    .iter()
-                    .find(|(name, _value)| name == "expires_in")
-                    .expect("Cannot find expires_in in the HTTP Post request.");
+                    let (_, expires_in) = form_params
+                        .iter()
+                        .find(|(name, _value)| name == "expires_in")
+                        .expect("Cannot find expires_in in the HTTP Post request.");
 
-                let (_, state) = form_params
-                    .iter()
-                    .find(|(name, _value)| name == "state")
-                    .expect("Cannot find state in the HTTP Post request.");
+                    let (_, state) = form_params
+                        .iter()
+                        .find(|(name, _value)| name == "state")
+                        .expect("Cannot find state in the HTTP Post request.");
 
-                if state == csrf_token.secret() {
-                    Some(TokenInfo {
-                        access_token: access_token.to_string(),
-                        refresh_token: None,
-                        expires: Some(
-                            SystemTime::now().add(Duration::from_secs(
-                                expires_in
-                                    .parse::<u64>()
-                                    .expect("expires_in is an incorrect number"),
-                            )),
-                        ),
-                        scope: None,
-                    })
-                } else {
-                    log::debug!("Incorrect CSRF token. Aborting...");
+                    if state == csrf_token.secret() {
+                        Some(TokenInfo {
+                            access_token: access_token.to_string(),
+                            refresh_token: None,
+                            expires: Some(
+                                SystemTime::now().add(Duration::from_secs(
+                                    expires_in
+                                        .parse::<u64>()
+                                        .expect("expires_in is an incorrect number"),
+                                )),
+                            ),
+                            scope: None,
+                        })
+                    } else {
+                        log::debug!("Incorrect CSRF token. Aborting...");
+
+                        None
+                    }
+                }
+                _ => {
+                    log::debug!(
+                        "Call to server without a state and/or a code parameter. Ignoring..."
+                    );
 
                     None
                 }
-            }
-            _ => {
-                log::debug!("Call to server without a state and/or a code parameter. Ignoring...");
-
-                None
-            }
-        })
+            },
+        )
         .await
     }
 }
