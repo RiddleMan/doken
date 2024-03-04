@@ -18,7 +18,7 @@ use std::process::exit;
 use crate::token_info::TokenInfo;
 
 pub mod args;
-mod auth_browser;
+pub mod auth_browser;
 mod config_file;
 mod file_state;
 pub mod grant;
@@ -27,7 +27,7 @@ mod openidc_discovery;
 mod retrievers;
 mod token_info;
 
-pub async fn get_token(args: Arguments) -> Result<String> {
+pub async fn get_token(args: Arguments, auth_browser: &mut AuthBrowser) -> Result<String> {
     let file_state = FileState::new();
     let oauth_client = OAuthClient::new(&args).await?;
 
@@ -42,16 +42,14 @@ pub async fn get_token(args: Arguments) -> Result<String> {
         }
     }
 
-    let mut auth_browser = AuthBrowser::new().await?;
-
     let mut retriever: Box<dyn TokenRetriever> = match args.grant {
         Grant::AuthorizationCodeWithPkce { .. } => Box::new(
-            AuthorizationCodeWithPKCERetriever::new(&args, &oauth_client, &mut auth_browser),
+            AuthorizationCodeWithPKCERetriever::new(&args, &oauth_client, auth_browser),
         ),
         Grant::AuthorizationCode { .. } => {
-            Box::new(AuthorizationCodeRetriever::new(&args, &oauth_client, &mut auth_browser))
+            Box::new(AuthorizationCodeRetriever::new(&args, &oauth_client, auth_browser))
         }
-        Grant::Implicit => Box::new(ImplicitRetriever::new(&args, &oauth_client, &mut auth_browser)),
+        Grant::Implicit => Box::new(ImplicitRetriever::new(&args, &oauth_client, auth_browser)),
         Grant::ResourceOwnerPasswordClientCredentials => Box::new(
             ResourceOwnerPasswordClientCredentialsRetriever::new(&oauth_client),
         ),

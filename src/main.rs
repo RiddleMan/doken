@@ -1,6 +1,7 @@
 #![deny(warnings)]
 
 use doken::args::Args;
+use doken::auth_browser::AuthBrowser;
 use doken::get_token;
 use std::env;
 use std::process::exit;
@@ -21,6 +22,7 @@ async fn main() -> Result<()> {
 
     let args = Args::parse().await;
 
-    println!("{}", get_token(args).await?);
+    let mut auth_browser = AuthBrowser::new().await?;
+    println!("{}", get_token(args, &mut auth_browser).await?);
     exit(0);
 }
