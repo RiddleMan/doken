@@ -112,7 +112,7 @@ impl AuthBrowser {
         .map_err(|e| anyhow!(e))
     }
 
-    fn _page(&self) -> Arc<Page> {
+    pub fn page(&self) -> Arc<Page> {
         self.page.clone()
     }
 
