@@ -15,7 +15,6 @@ use anyhow::Result;
 use auth_browser::auth_browser::AuthBrowser;
 use crate::args::Arguments;
 use std::process::exit;
-use crate::token_info::TokenInfo;
 
 pub mod args;
 pub mod auth_browser;
@@ -44,12 +43,12 @@ pub async fn get_token(args: Arguments, auth_browser: &mut AuthBrowser) -> Resul
 
     let mut retriever: Box<dyn TokenRetriever> = match args.grant {
         Grant::AuthorizationCodeWithPkce { .. } => Box::new(
-            AuthorizationCodeWithPKCERetriever::new(&args, &oauth_client, auth_browser),
+            AuthorizationCodeWithPKCERetriever::new(&args, &oauth_client, auth_browser.open_page().await.unwrap()),
         ),
         Grant::AuthorizationCode { .. } => {
-            Box::new(AuthorizationCodeRetriever::new(&args, &oauth_client, auth_browser))
+            Box::new(AuthorizationCodeRetriever::new(&args, &oauth_client, auth_browser.open_page().await.unwrap()))
         }
-        Grant::Implicit => Box::new(ImplicitRetriever::new(&args, &oauth_client, auth_browser)),
+        Grant::Implicit => Box::new(ImplicitRetriever::new(&args, &oauth_client, auth_browser.open_page().await.unwrap())),
         Grant::ResourceOwnerPasswordClientCredentials => Box::new(
             ResourceOwnerPasswordClientCredentialsRetriever::new(&oauth_client),
         ),

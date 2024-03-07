@@ -1,5 +1,5 @@
 use crate::args::Arguments;
-use crate::auth_browser::auth_browser::AuthBrowser;
+use crate::auth_browser::auth_browser::AuthPage;
 use crate::oauth_client::OAuthClient;
 use crate::token_info::TokenInfo;
 use anyhow::Result;
@@ -10,7 +10,7 @@ use super::token_retriever::TokenRetriever;
 
 pub struct AuthorizationCodeRetriever<'a> {
     oauth_client: &'a OAuthClient<'a>,
-    auth_browser: &'a mut AuthBrowser,
+    auth_page: AuthPage,
     args: &'a Arguments,
 }
 
@@ -18,9 +18,9 @@ impl<'a> AuthorizationCodeRetriever<'a> {
     pub fn new<'b>(
         args: &'b Arguments,
         oauth_client: &'b OAuthClient<'b>,
-        auth_browser: &'b mut AuthBrowser,
+        auth_page: AuthPage,
     ) -> AuthorizationCodeRetriever<'b> {
-        AuthorizationCodeRetriever { oauth_client, auth_browser, args }
+        AuthorizationCodeRetriever { oauth_client, auth_page, args }
     }
 }
 
@@ -30,7 +30,7 @@ impl<'a> TokenRetriever for AuthorizationCodeRetriever<'a> {
         let (url, csrf, _nonce) = self.oauth_client.authorize_url(None);
 
         let code = self
-            .auth_browser
+            .auth_page
             .get_code(
                 self.args.timeout,
                 url,

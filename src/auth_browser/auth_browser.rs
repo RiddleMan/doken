@@ -1,4 +1,4 @@
-use crate::TokenInfo;
+use crate::token_info::TokenInfo;
 use anyhow::{anyhow, Result};
 use base64::prelude::BASE64_STANDARD;
 use base64::Engine;
@@ -11,6 +11,7 @@ use chromiumoxide::handler::viewport::Viewport;
 use chromiumoxide::{Handler, Page};
 use futures::StreamExt;
 use oauth2::CsrfToken;
+use tokio::time::sleep;
 use std::borrow::Cow;
 use std::ops::Add;
 use std::sync::Arc;
@@ -24,103 +25,19 @@ enum RequestError {
     #[error("No requests with required data. Timeout.")]
     Timeout,
 
+    // TODO: Implement channels to all pages to close them
     #[error("The user closed the browser")]
-    BrowserClosed,
+    _BrowserClosed,
 }
 
 const CONTENT_OK: &str = "<html><head></head><body><h1>OK</h1></body></html>";
 const CONTENT_NOT_OK: &str = "<html><head></head><body><h1>NOT OK</h1></body></html>";
 
-pub struct AuthBrowser {
-    page: Arc<Page>,
-    browser: Browser,
-    rx_handle: oneshot::Receiver<()>,
+pub struct AuthPage {
+    page: Page,
 }
 
-impl AuthBrowser {
-    pub async fn new(headless: bool) -> Result<AuthBrowser> {
-        let (browser, mut handler) = Self::launch_browser(headless).await?;
-        let (tx, rx) = oneshot::channel::<()>();
-
-        tokio::spawn(async move {
-            while let Some(h) = handler.next().await {
-                if h.is_err() {
-                    tx.send(()).unwrap();
-                    log::error!("Handler created an error");
-                    break;
-                }
-            }
-        });
-
-        let page = Arc::new(Self::wait_for_first_page(&browser).await?);
-
-        Ok(AuthBrowser {
-            page,
-            browser,
-            rx_handle: rx,
-        })
-    }
-
-    async fn wait_for_first_page(browser: &Browser) -> Result<Page> {
-        let mut retries = 10;
-        loop {
-            tokio::time::sleep(Duration::from_millis(100)).await;
-
-            log::debug!("Trying to reach the first page...");
-            let pages = browser.pages().await?;
-            match (pages.first(), retries) {
-                (Some(page), _) => {
-                    log::debug!("First page found");
-                    return Ok(page.to_owned());
-                }
-                (None, 0) => {
-                    log::debug!("Too many retries. Creating new page.");
-                    let page_config = CreateTargetParamsBuilder::default()
-                        .url("about:blank")
-                        .build()
-                        .map_err(|e| anyhow!(e))?;
-                    return browser.new_page(page_config).await.map_err(|e| anyhow!(e));
-                }
-                (None, _) => {
-                    log::debug!("Just another try");
-                    retries -= 1;
-                }
-            }
-        }
-    }
-
-    async fn launch_browser(headless: bool) -> Result<(Browser, Handler)> {
-        log::debug!("Opening chromium instance");
-        const WIDTH: u32 = 800;
-        const HEIGHT: u32 = 1000;
-        let viewport = Viewport {
-            width: WIDTH,
-            height: HEIGHT,
-            ..Viewport::default()
-        };
-
-        let mut config = BrowserConfig::builder();
-
-        if !headless {
-            config = config.with_head();
-        }
-
-        config = config
-            .viewport(viewport)
-            .window_size(WIDTH, HEIGHT)
-            .enable_request_intercept()
-            .respect_https_errors()
-            .enable_cache();
-
-        Browser::launch(config.build().map_err(|e| anyhow!(e))?)
-            .await
-            .map_err(|e| anyhow!(e))
-    }
-
-    pub fn page(&self) -> Arc<Page> {
-        self.page.clone()
-    }
-
+impl AuthPage {
     async fn process_request<TResponse, F>(
         &mut self,
         timeout: u64,
@@ -140,7 +57,7 @@ impl AuthBrowser {
             .unwrap();
         let intercept_page = self.page.clone();
         let callback_url = callback_url.to_owned();
-        let intercept_handle = tokio::spawn(async move {
+        tokio::spawn(async move {
             while let Some(event) = request_paused.next().await {
                 let request_url = Url::parse(&event.request.url).unwrap();
                 if request_url.origin() == callback_url.origin()
@@ -185,21 +102,18 @@ impl AuthBrowser {
         self.page.goto(authorization_url.as_str()).await?;
 
         let response = tokio::select! {
-            _ = tokio::time::sleep(Duration::from_millis(timeout)) => {
+            _ = sleep(Duration::from_millis(timeout)) => {
                 log::debug!("Timeout");
                 Err::<TResponse, anyhow::Error>(RequestError::Timeout.into())
             }
             Ok(response) = rx_browser => {
                 Ok::<TResponse, anyhow::Error>(response)
             }
-            _ = &mut self.rx_handle => {
-                log::debug!("User closed the browser");
-                Err::<TResponse, anyhow::Error>(RequestError::BrowserClosed.into())
-            }
+            // _ = &mut self.rx_handle => {
+            //     log::debug!("User closed the browser");
+            //     Err::<TResponse, anyhow::Error>(RequestError::BrowserClosed.into())
+            // }
         };
-
-        let _ = self.browser.close().await;
-        let _ = intercept_handle.await;
 
         response
     }
@@ -305,5 +219,186 @@ impl AuthBrowser {
             },
         )
         .await
+    }
+}
+
+pub struct AuthBrowser {
+    browser: Option<Browser>,
+    _open_pages_count: u16,
+    headless: bool,
+}
+
+impl AuthBrowser {
+    pub fn new(headless: bool) -> AuthBrowser {
+        AuthBrowser {
+            browser: None,
+            headless,
+            _open_pages_count: 0,
+        }
+    }
+
+    pub async fn open_page(&mut self) -> Result<AuthPage> {
+        let browser_page = self.lazy_open_page().await?;
+        let page = AuthPage { page: browser_page };
+        self._open_pages_count += 1;
+        Ok(page)
+    }
+
+    async fn lazy_open_page(&mut self) -> Result<Page> {
+        if self.browser.is_none() {
+            let (tx, _) = oneshot::channel::<()>();
+
+            let (browser, mut handler) = Self::launch_browser(self.headless).await?;
+
+            tokio::spawn(async move {
+                while let Some(h) = handler.next().await {
+                    if h.is_err() {
+                        tx.send(()).unwrap();
+                        log::error!("Handler created an error");
+                        break;
+                    }
+                }
+            });
+
+            self.browser = Some(browser);
+        };
+
+        let browser = self.browser.as_ref().unwrap();
+        if self._open_pages_count == 0 {
+            self.wait_for_first_page(browser).await
+        } else {
+            let page_config = CreateTargetParamsBuilder::default()
+                .url("about:blank")
+                .build()
+                .map_err(|e| anyhow!(e))?;
+            browser.new_page(page_config).await.map_err(|e| anyhow!(e))
+        }
+    }
+
+    async fn wait_for_first_page(&self, browser: &Browser) -> Result<Page> {
+        let mut retries = 10;
+
+        if self._open_pages_count != 0 {
+            let page_config = CreateTargetParamsBuilder::default()
+                .url("about:blank")
+                .build()
+                .map_err(|e| anyhow!(e))?;
+            return browser.new_page(page_config).await.map_err(|e| anyhow!(e));
+        }
+
+        loop {
+            tokio::time::sleep(Duration::from_millis(100)).await;
+
+            log::debug!("Trying to reach the first page...");
+            let pages = browser.pages().await?;
+            match (pages.first(), retries) {
+                (Some(page), _) => {
+                    log::debug!("First page found");
+                    return Ok(page.to_owned());
+                }
+                (None, 0) => {
+                    log::debug!("Too many retries. Creating new page.");
+                    let page_config = CreateTargetParamsBuilder::default()
+                        .url("about:blank")
+                        .build()
+                        .map_err(|e| anyhow!(e))?;
+                    return browser.new_page(page_config).await.map_err(|e| anyhow!(e));
+                }
+                (None, _) => {
+                    log::debug!("Just another try");
+                    retries -= 1;
+                }
+            }
+        }
+    }
+
+    async fn launch_browser(headless: bool) -> Result<(Browser, Handler)> {
+        log::debug!("Opening chromium instance");
+        const WIDTH: u32 = 800;
+        const HEIGHT: u32 = 1000;
+        let viewport = Viewport {
+            width: WIDTH,
+            height: HEIGHT,
+            ..Viewport::default()
+        };
+
+        let mut config = BrowserConfig::builder();
+
+        if !headless {
+            config = config.with_head();
+        }
+
+        config = config
+            .viewport(viewport)
+            .window_size(WIDTH, HEIGHT)
+            .enable_request_intercept()
+            .respect_https_errors()
+            .enable_cache();
+
+        Browser::launch(config.build().map_err(|e| anyhow!(e))?)
+            .await
+            .map_err(|e| anyhow!(e))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use tokio::join;
+    use tokio::sync::Mutex;
+
+    use super::*;
+
+    #[tokio::test]
+    async fn test_opens_a_browser() {
+        env_logger::init();
+        let auth_browser = Arc::new(Mutex::new(AuthBrowser::new(false)));
+
+        let browser1 = auth_browser.clone();
+        let handle1 = tokio::spawn(async move {
+            let mut lock = browser1.lock().await;
+            let page = lock.open_page().await;
+
+            drop(lock);
+            let x =  page.unwrap()
+                .get_code(
+                    2_000,
+                    Url::parse("https://wykop.pl").unwrap(),
+                    Url::parse("http://google.com/oauth/callback").unwrap(),
+                    CsrfToken::new_random(),
+                )
+                .await;
+
+            log::info!("Test1");
+                x.unwrap();
+            log::info!("Test1after");
+
+            println!("Code");
+        });
+
+        let browser2 = auth_browser.clone();
+        let handle2 = tokio::spawn(async move {
+            let mut lock = browser2.lock().await;
+            let page = lock.open_page().await;
+
+            drop(lock);
+            let x =  page.unwrap()
+                .get_code(
+                    2_000,
+                    Url::parse("https://wykop.pl/mikroblog").unwrap(),
+                    Url::parse("http://google.com/oauth/callback").unwrap(),
+                    CsrfToken::new_random(),
+                )
+                .await;
+
+            log::info!("Test2");
+                x.unwrap();
+            log::info!("Test2after");
+
+            println!("Code");
+        });
+
+        log::info!("Joining");
+        let (_, _) = join!(handle1, handle2);
+        log::info!("After");
     }
 }

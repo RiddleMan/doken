@@ -22,7 +22,9 @@ async fn main() -> Result<()> {
 
     let args = Args::parse().await;
 
-    let mut auth_browser = AuthBrowser::new(false).await?;
+    {
+    let mut auth_browser = AuthBrowser::new(false);
     println!("{}", get_token(args, &mut auth_browser).await?);
+    }
     exit(0);
 }
