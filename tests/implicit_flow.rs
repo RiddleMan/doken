@@ -1,4 +1,4 @@
-use std::env::home_dir;
+use home::home_dir;
 use std::time::Duration;
 
 use doken::{args::Arguments, auth_browser::auth_browser::AuthBrowser, get_token, grant::Grant};
@@ -33,11 +33,12 @@ lazy_static! {
         "http://localhost:3000/oauth/callback".to_owned(),
         "http://localhost:5000/oauth/callback234234234234".to_owned(),
     ];
+    static ref TOKIO_RUNTIME: tokio::runtime::Runtime = tokio::runtime::Runtime::new().unwrap();
     static ref IDP_INFO: OnceCell<IdentityProviderInfo> = OnceCell::new();
     static ref AUTH_BROWSER: Arc<Mutex<AuthBrowser>> = {
         let browser = Arc::new(Mutex::new(AuthBrowser::new(false)));
         let temp = browser.clone();
-        tokio::spawn(async move {
+        TOKIO_RUNTIME.spawn(async move {
             loop {
                 log::info!("===================================================================",);
                 let browser = temp.lock().await;
@@ -80,7 +81,7 @@ lazy_static! {
                                 .unwrap();
                             log::info!("=================================================================== OK 2");
                             log::info!("=================================================================== OK 2.5");
-                            let click = submit_element.click().await.unwrap();
+                            submit_element.click().await.unwrap();
                             log::info!("=================================================================== OK 3");
                             sleep(Duration::from_secs(1)).await;
                         }
@@ -88,7 +89,6 @@ lazy_static! {
                             log::error!("{:?}", tuple.0);
                             log::error!("{:?}", tuple.1);
                             log::error!("{:?}", tuple.2);
-                            log::info!("Not found once again!: {:?}", page.url().await.unwrap());
                             sleep(Duration::from_secs(1)).await;
                         }
                     }
@@ -97,7 +97,6 @@ lazy_static! {
         });
         browser
     };
-    static ref TEST_MUTEX: Arc<Mutex<()>> = Arc::new(Mutex::new(()));
 }
 
 async fn get_idp_info() -> &'static IdentityProviderInfo {
@@ -129,44 +128,44 @@ fn remove_config_if_available() -> () {
     let _ = remove_file(doken_config);
 }
 
-#[tokio::test]
-async fn it_authenticates_with_authorization_code_with_pkce_flow() {
-    let x = AUTH_BROWSER.clone();
-    let y = TEST_MUTEX.clone();
-    let y = y.lock().await;
-    let _ = env_logger::try_init();
-    let idp_info = get_idp_info().await;
+#[test]
+#[serial]
+fn it_authenticates_with_authorization_code_with_pkce_flow() {
+        let _ = env_logger::try_init();
+    TOKIO_RUNTIME.block_on(async {
+        let idp_info = get_idp_info().await;
 
-    let browser = x.lock().await;
-    remove_config_if_available();
-    let pkce_token = get_token(
-        Arguments {
-            grant: Grant::AuthorizationCodeWithPkce,
-            discovery_url: Some(idp_info.discovery_url.to_owned()),
-            callback_url: Some(REDIRECT_URIS[0].to_owned()),
-            client_id: CLIENT_ID.to_owned(),
-            client_secret: Some(idp_info.client_secret.to_owned()),
-            ..Default::default()
-        },
-        browser,
-    )
-    .await
-    .unwrap();
-    drop(y);
+        let x = AUTH_BROWSER.clone();
+        let browser = x.lock().await;
+        remove_config_if_available();
+        let pkce_token = get_token(
+            Arguments {
+                grant: Grant::AuthorizationCodeWithPkce,
+                discovery_url: Some(idp_info.discovery_url.to_owned()),
+                callback_url: Some(REDIRECT_URIS[0].to_owned()),
+                client_id: CLIENT_ID.to_owned(),
+                client_secret: Some(idp_info.client_secret.to_owned()),
+                ..Default::default()
+            },
+            browser,
+        )
+        .await
+        .unwrap();
 
-    print!("{}", pkce_token);
+        print!("{}", pkce_token);
 
-    assert!(!pkce_token.is_empty());
+        assert!(!pkce_token.is_empty());
+    });
 }
 
-#[tokio::test]
-async fn it_authenticates_with_authorization_code_flow() {
-    let x = AUTH_BROWSER.clone();
-    let y = TEST_MUTEX.clone();
-    let y = y.lock().await;
+#[test]
+#[serial]
+fn it_authenticates_with_authorization_code_flow() {
     let _ = env_logger::try_init();
+    TOKIO_RUNTIME.block_on(async {
     let idp_info = get_idp_info().await;
 
+    let x = AUTH_BROWSER.clone();
     let browser = x.lock().await;
     remove_config_if_available();
     let pkce_token = get_token(
@@ -182,9 +181,9 @@ async fn it_authenticates_with_authorization_code_flow() {
     )
     .await
     .unwrap();
-    drop(y);
 
     print!("{}", pkce_token);
 
     assert!(!pkce_token.is_empty());
+    });
 }

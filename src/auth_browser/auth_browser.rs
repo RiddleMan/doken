@@ -249,6 +249,7 @@ impl AuthBrowser {
     pub async fn browser(&self) -> &Browser {
         self.browser
             .get_or_init(|| async {
+                log::debug!("THIS SHOULD BE CALLED ONCE!!!!");
                 let (tx, _) = oneshot::channel::<()>();
 
                 let (browser, mut handler) = Self::launch_browser(self.headless).await.unwrap();
