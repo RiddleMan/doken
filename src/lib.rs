@@ -26,12 +26,12 @@ mod openidc_discovery;
 mod retrievers;
 mod token_info;
 
-pub async fn get_token(args: Arguments, auth_browser: &mut AuthBrowser) -> Result<String> {
+pub async fn get_token(args: Arguments, auth_browser: &AuthBrowser) -> Result<String> {
     let file_state = FileState::new();
     let oauth_client = OAuthClient::new(&args).await?;
 
     if !args.force {
-        let mut file_retriever = FileRetriever::new(&args, &oauth_client);
+        let file_retriever = FileRetriever::new(&args, &oauth_client);
 
         let file_token_info = file_retriever.retrieve().await;
 
@@ -41,7 +41,7 @@ pub async fn get_token(args: Arguments, auth_browser: &mut AuthBrowser) -> Resul
         }
     }
 
-    let mut retriever: Box<dyn TokenRetriever> = match args.grant {
+    let retriever: Box<dyn TokenRetriever> = match args.grant {
         Grant::AuthorizationCodeWithPkce { .. } => Box::new(
             AuthorizationCodeWithPKCERetriever::new(&args, &oauth_client, auth_browser.open_page().await.unwrap()),
         ),

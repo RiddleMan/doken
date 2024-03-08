@@ -16,7 +16,7 @@ impl<'a> ClientCredentialsRetriever<'a> {
 
 #[async_trait(?Send)]
 impl<'a> TokenRetriever for ClientCredentialsRetriever<'a> {
-    async fn retrieve(&mut self) -> Result<TokenInfo> {
+    async fn retrieve(&self) -> Result<TokenInfo> {
         Ok(TokenInfo::from_token_response(
             self.oauth_client.exchange_client_credentials().await?,
         ))

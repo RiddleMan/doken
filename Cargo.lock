@@ -490,6 +490,7 @@ dependencies = [
  "futures",
  "home",
  "keycloak",
+ "lazy_static",
  "log",
  "oauth2",
  "rand",

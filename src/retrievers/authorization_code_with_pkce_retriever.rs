@@ -31,7 +31,7 @@ impl<'a> AuthorizationCodeWithPKCERetriever<'a> {
 
 #[async_trait(?Send)]
 impl<'a> TokenRetriever for AuthorizationCodeWithPKCERetriever<'a> {
-    async fn retrieve(&mut self) -> Result<TokenInfo> {
+    async fn retrieve(&self) -> Result<TokenInfo> {
         let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
 
         let (url, csrf, _nonce) = self.oauth_client.authorize_url(Some(pkce_challenge));

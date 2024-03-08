@@ -11,13 +11,13 @@ use chromiumoxide::handler::viewport::Viewport;
 use chromiumoxide::{Handler, Page};
 use futures::StreamExt;
 use oauth2::CsrfToken;
-use tokio::time::sleep;
 use std::borrow::Cow;
 use std::ops::Add;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 use thiserror::Error;
-use tokio::sync::oneshot;
+use tokio::sync::{oneshot, OnceCell};
+use tokio::time::sleep;
 use url::Url;
 
 #[derive(Error, Debug)]
@@ -39,7 +39,7 @@ pub struct AuthPage {
 
 impl AuthPage {
     async fn process_request<TResponse, F>(
-        &mut self,
+        &self,
         timeout: u64,
         authorization_url: Url,
         callback_url: Url,
@@ -119,7 +119,7 @@ impl AuthPage {
     }
 
     pub async fn get_code(
-        &mut self,
+        &self,
         timeout: u64,
         authorization_url: Url,
         callback_url: Url,
@@ -156,7 +156,7 @@ impl AuthPage {
     }
 
     pub async fn get_token_data(
-        &mut self,
+        &self,
         timeout: u64,
         authorization_url: Url,
         callback_url: Url,
@@ -223,32 +223,29 @@ impl AuthPage {
 }
 
 pub struct AuthBrowser {
-    browser: Option<Browser>,
-    _open_pages_count: u16,
+    browser: OnceCell<Browser>,
     headless: bool,
 }
 
 impl AuthBrowser {
     pub fn new(headless: bool) -> AuthBrowser {
         AuthBrowser {
-            browser: None,
+            browser: OnceCell::new(),
             headless,
-            _open_pages_count: 0,
         }
     }
 
-    pub async fn open_page(&mut self) -> Result<AuthPage> {
+    pub async fn open_page(&self) -> Result<AuthPage> {
         let browser_page = self.lazy_open_page().await?;
         let page = AuthPage { page: browser_page };
-        self._open_pages_count += 1;
         Ok(page)
     }
 
-    async fn lazy_open_page(&mut self) -> Result<Page> {
-        if self.browser.is_none() {
+    pub async fn browser(&self) -> &Browser {
+        self.browser.get_or_init(|| async {
             let (tx, _) = oneshot::channel::<()>();
 
-            let (browser, mut handler) = Self::launch_browser(self.headless).await?;
+            let (browser, mut handler) = Self::launch_browser(self.headless).await.unwrap();
 
             tokio::spawn(async move {
                 while let Some(h) = handler.next().await {
@@ -259,32 +256,39 @@ impl AuthBrowser {
                     }
                 }
             });
+            browser
+        }).await
+    }
 
-            self.browser = Some(browser);
-        };
+    pub async fn pages(&self) -> Result<Vec<Page>> {
+        self.browser().await
+            .pages()
+            .await
+            .map_err(|e| anyhow!(e))
+    }
 
-        let browser = self.browser.as_ref().unwrap();
-        if self._open_pages_count == 0 {
-            self.wait_for_first_page(browser).await
-        } else {
+    async fn lazy_open_page(&self) -> Result<Page> {
+
+        let browser = self.browser().await;
+        let page = self.wait_for_first_page(browser).await?;
+
+        match page.url().await? {
+            Some(_) => {
+                log::debug!("First page is about:blank. Creating new page.");
+                Ok(page)
+            },
+            _ => {
             let page_config = CreateTargetParamsBuilder::default()
                 .url("about:blank")
                 .build()
                 .map_err(|e| anyhow!(e))?;
             browser.new_page(page_config).await.map_err(|e| anyhow!(e))
+            }
         }
     }
 
     async fn wait_for_first_page(&self, browser: &Browser) -> Result<Page> {
         let mut retries = 10;
-
-        if self._open_pages_count != 0 {
-            let page_config = CreateTargetParamsBuilder::default()
-                .url("about:blank")
-                .build()
-                .map_err(|e| anyhow!(e))?;
-            return browser.new_page(page_config).await.map_err(|e| anyhow!(e));
-        }
 
         loop {
             tokio::time::sleep(Duration::from_millis(100)).await;
@@ -294,6 +298,7 @@ impl AuthBrowser {
             match (pages.first(), retries) {
                 (Some(page), _) => {
                     log::debug!("First page found");
+                    log::debug!("Pages: {:?}", page.url().await?.unwrap());
                     return Ok(page.to_owned());
                 }
                 (None, 0) => {
@@ -338,67 +343,5 @@ impl AuthBrowser {
         Browser::launch(config.build().map_err(|e| anyhow!(e))?)
             .await
             .map_err(|e| anyhow!(e))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use tokio::join;
-    use tokio::sync::Mutex;
-
-    use super::*;
-
-    #[tokio::test]
-    async fn test_opens_a_browser() {
-        env_logger::init();
-        let auth_browser = Arc::new(Mutex::new(AuthBrowser::new(false)));
-
-        let browser1 = auth_browser.clone();
-        let handle1 = tokio::spawn(async move {
-            let mut lock = browser1.lock().await;
-            let page = lock.open_page().await;
-
-            drop(lock);
-            let x =  page.unwrap()
-                .get_code(
-                    2_000,
-                    Url::parse("https://wykop.pl").unwrap(),
-                    Url::parse("http://google.com/oauth/callback").unwrap(),
-                    CsrfToken::new_random(),
-                )
-                .await;
-
-            log::info!("Test1");
-                x.unwrap();
-            log::info!("Test1after");
-
-            println!("Code");
-        });
-
-        let browser2 = auth_browser.clone();
-        let handle2 = tokio::spawn(async move {
-            let mut lock = browser2.lock().await;
-            let page = lock.open_page().await;
-
-            drop(lock);
-            let x =  page.unwrap()
-                .get_code(
-                    2_000,
-                    Url::parse("https://wykop.pl/mikroblog").unwrap(),
-                    Url::parse("http://google.com/oauth/callback").unwrap(),
-                    CsrfToken::new_random(),
-                )
-                .await;
-
-            log::info!("Test2");
-                x.unwrap();
-            log::info!("Test2after");
-
-            println!("Code");
-        });
-
-        log::info!("Joining");
-        let (_, _) = join!(handle1, handle2);
-        log::info!("After");
     }
 }

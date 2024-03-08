@@ -4,5 +4,5 @@ use async_trait::async_trait;
 
 #[async_trait(?Send)]
 pub trait TokenRetriever {
-    async fn retrieve(&mut self) -> Result<TokenInfo>;
+    async fn retrieve(&self) -> Result<TokenInfo>;
 }
