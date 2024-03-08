@@ -4,6 +4,7 @@ use anyhow::Result;
 use doken::args::Args;
 use doken::auth_browser::auth_browser::AuthBrowser;
 use doken::get_token;
+use tokio::sync::Mutex;
 use std::env;
 use std::process::exit;
 
@@ -23,8 +24,8 @@ async fn main() -> Result<()> {
     let args = Args::parse().await;
 
     {
-        let mut auth_browser = AuthBrowser::new(false);
-        println!("{}", get_token(args, &mut auth_browser).await?);
+        let auth_browser = Mutex::new(AuthBrowser::new(false));
+        println!("{}", get_token(args, auth_browser.lock().await).await?);
     }
     exit(0);
 }

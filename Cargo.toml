@@ -40,6 +40,7 @@ rand = "0.8.5"
 testcontainers = { version = "0.15.0", features = ["tokio"] }
 keycloak = "21.0.102"
 lazy_static = "1.4.0"
+serial_test = "3.0.0"
 
 # The profile that 'cargo dist' will build with
 [profile.dist]

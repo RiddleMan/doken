@@ -220,6 +220,11 @@ impl AuthPage {
         )
         .await
     }
+
+    pub async fn close(self) -> Result<()> {
+        self.page.close().await.map_err(|e| anyhow!(e))?;
+        Ok(())
+    }
 }
 
 pub struct AuthBrowser {
@@ -242,47 +247,53 @@ impl AuthBrowser {
     }
 
     pub async fn browser(&self) -> &Browser {
-        self.browser.get_or_init(|| async {
-            let (tx, _) = oneshot::channel::<()>();
+        self.browser
+            .get_or_init(|| async {
+                let (tx, _) = oneshot::channel::<()>();
 
-            let (browser, mut handler) = Self::launch_browser(self.headless).await.unwrap();
+                let (browser, mut handler) = Self::launch_browser(self.headless).await.unwrap();
 
-            tokio::spawn(async move {
-                while let Some(h) = handler.next().await {
-                    if h.is_err() {
-                        tx.send(()).unwrap();
-                        log::error!("Handler created an error");
-                        break;
+                tokio::spawn(async move {
+                    while let Some(h) = handler.next().await {
+                        if h.is_err() {
+                            tx.send(()).unwrap();
+                            log::error!("Handler created an error");
+                            break;
+                        }
                     }
-                }
-            });
-            browser
-        }).await
+                });
+                browser
+            })
+            .await
     }
 
     pub async fn pages(&self) -> Result<Vec<Page>> {
-        self.browser().await
-            .pages()
-            .await
-            .map_err(|e| anyhow!(e))
+        self.browser().await.pages().await.map_err(|e| anyhow!(e))
     }
 
     async fn lazy_open_page(&self) -> Result<Page> {
-
         let browser = self.browser().await;
         let page = self.wait_for_first_page(browser).await?;
 
         match page.url().await? {
-            Some(_) => {
-                log::debug!("First page is about:blank. Creating new page.");
-                Ok(page)
-            },
+            Some(url) => {
+                if url == "chrome://new-tab-page/" {
+                    page.goto("about:blank").await.unwrap();
+                    Ok(page)
+                } else {
+                    let page_config = CreateTargetParamsBuilder::default()
+                        .url("about:blank")
+                        .build()
+                        .map_err(|e| anyhow!(e))?;
+                    browser.new_page(page_config).await.map_err(|e| anyhow!(e))
+                }
+            }
             _ => {
-            let page_config = CreateTargetParamsBuilder::default()
-                .url("about:blank")
-                .build()
-                .map_err(|e| anyhow!(e))?;
-            browser.new_page(page_config).await.map_err(|e| anyhow!(e))
+                let page_config = CreateTargetParamsBuilder::default()
+                    .url("about:blank")
+                    .build()
+                    .map_err(|e| anyhow!(e))?;
+                browser.new_page(page_config).await.map_err(|e| anyhow!(e))
             }
         }
     }
@@ -343,5 +354,14 @@ impl AuthBrowser {
         Browser::launch(config.build().map_err(|e| anyhow!(e))?)
             .await
             .map_err(|e| anyhow!(e))
+    }
+
+    pub async fn close_all_tabs(&self) -> Result<()> {
+        let pages = self.pages().await?;
+
+        for page in pages {
+            page.close().await.map_err(|e| anyhow!(e))?;
+        }
+        Ok(())
     }
 }

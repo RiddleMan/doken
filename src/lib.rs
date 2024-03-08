@@ -1,5 +1,6 @@
 #![deny(warnings)]
 
+use crate::args::Arguments;
 use crate::file_state::FileState;
 use crate::grant::Grant;
 use crate::oauth_client::OAuthClient;
@@ -13,8 +14,8 @@ use crate::retrievers::token_retriever::TokenRetriever;
 use anyhow::Context;
 use anyhow::Result;
 use auth_browser::auth_browser::AuthBrowser;
-use crate::args::Arguments;
 use std::process::exit;
+use tokio::sync::MutexGuard;
 
 pub mod args;
 pub mod auth_browser;
@@ -26,7 +27,10 @@ mod openidc_discovery;
 mod retrievers;
 mod token_info;
 
-pub async fn get_token(args: Arguments, auth_browser: &AuthBrowser) -> Result<String> {
+pub async fn get_token(
+    args: Arguments,
+    auth_browser: MutexGuard<'_, AuthBrowser>,
+) -> Result<String> {
     let file_state = FileState::new();
     let oauth_client = OAuthClient::new(&args).await?;
 
@@ -42,13 +46,29 @@ pub async fn get_token(args: Arguments, auth_browser: &AuthBrowser) -> Result<St
     }
 
     let retriever: Box<dyn TokenRetriever> = match args.grant {
-        Grant::AuthorizationCodeWithPkce { .. } => Box::new(
-            AuthorizationCodeWithPKCERetriever::new(&args, &oauth_client, auth_browser.open_page().await.unwrap()),
-        ),
-        Grant::AuthorizationCode { .. } => {
-            Box::new(AuthorizationCodeRetriever::new(&args, &oauth_client, auth_browser.open_page().await.unwrap()))
+        Grant::AuthorizationCodeWithPkce { .. } => {
+            let auth_page = auth_browser.open_page().await?;
+            drop(auth_browser);
+            Box::new(AuthorizationCodeWithPKCERetriever::new(
+                &args,
+                &oauth_client,
+                auth_page,
+            ))
         }
-        Grant::Implicit => Box::new(ImplicitRetriever::new(&args, &oauth_client, auth_browser.open_page().await.unwrap())),
+        Grant::AuthorizationCode { .. } => {
+            let auth_page = auth_browser.open_page().await?;
+            drop(auth_browser);
+            Box::new(AuthorizationCodeRetriever::new(
+                &args,
+                &oauth_client,
+                auth_page,
+            ))
+        }
+        Grant::Implicit => {
+            let auth_page = auth_browser.open_page().await?;
+            drop(auth_browser);
+            Box::new(ImplicitRetriever::new(&args, &oauth_client, auth_page))
+        }
         Grant::ResourceOwnerPasswordClientCredentials => Box::new(
             ResourceOwnerPasswordClientCredentialsRetriever::new(&oauth_client),
         ),
