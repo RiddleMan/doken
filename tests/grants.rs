@@ -132,7 +132,7 @@ fn it_authenticates_with_authorization_code_with_pkce_grant() {
         let browser = AUTH_BROWSER.clone();
         let browser = browser.lock().await;
         remove_config_if_available();
-        let client_info = idp_info.clients.get(0).unwrap();
+        let client_info = idp_info.clients.first().unwrap();
         let pkce_token = get_token(
             Arguments {
                 grant: Grant::AuthorizationCodeWithPkce,
@@ -162,7 +162,7 @@ fn it_reuses_refresh_token_provided_by_idp_when_authenticating_once_again() {
         let browser = AUTH_BROWSER.clone();
         let browser_lock = browser.lock().await;
         remove_config_if_available();
-        let client_info = idp_info.clients.get(0).unwrap();
+        let client_info = idp_info.clients.first().unwrap();
         let args = Arguments {
             grant: Grant::AuthorizationCodeWithPkce,
             discovery_url: Some(idp_info.discovery_url.to_owned()),
@@ -194,7 +194,7 @@ fn it_opens_new_tab_if_client_ids_does_not_match() {
         let browser_lock = browser.lock().await;
         remove_config_if_available();
 
-        let client_info = idp_info.clients.get(0).unwrap();
+        let client_info = idp_info.clients.first().unwrap();
         let args = Arguments {
             grant: Grant::AuthorizationCodeWithPkce,
             discovery_url: Some(idp_info.discovery_url.to_owned()),
@@ -298,7 +298,7 @@ fn it_authenticates_with_client_credentials_grant() {
         let browser = AUTH_BROWSER.clone();
         let browser = browser.lock().await;
         remove_config_if_available();
-        let client_info = idp_info.clients.get(0).unwrap();
+        let client_info = idp_info.clients.first().unwrap();
         let pkce_token = get_token(
             Arguments {
                 grant: Grant::ClientCredentials,
@@ -328,7 +328,7 @@ fn it_authenticates_with_resource_owner_password_client_credentials_grant() {
         let browser = AUTH_BROWSER.clone();
         let browser = browser.lock().await;
         remove_config_if_available();
-        let client_info = idp_info.clients.get(0).unwrap();
+        let client_info = idp_info.clients.first().unwrap();
         let pkce_token = get_token(
             Arguments {
                 grant: Grant::ResourceOwnerPasswordClientCredentials,

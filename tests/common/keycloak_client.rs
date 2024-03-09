@@ -43,7 +43,7 @@ impl<'a> KeycloakClient<'a> {
         realm_name: &str,
         username: &str,
         password: &str,
-        clients: &Vec<(String, String)>,
+        clients: &[(String, String)],
     ) -> Result<()> {
         self.inner
             .post(RealmRepresentation {

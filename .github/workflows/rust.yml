@@ -15,20 +15,16 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
           components: rustfmt, clippy
-          override: true
       - uses: Swatinem/rust-cache@v2
-      - uses: mbrobbel/rustfmt-check@master
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Format
+        run: cargo fmt --check
       - name: Build
         run: cargo build --verbose
       - name: Test
         run: RUST_LOG=info cargo test --verbose
-      - uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features
+      - name: Clippy
+        run: cargo clippy --all-targets --all-features
