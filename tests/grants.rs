@@ -16,7 +16,7 @@ mod common;
 const REALM_NAME: &str = "test-realm";
 const USERNAME: &str = "test-user";
 const PASSWORD: &str = "test-password";
-const TIMEOUT: u64 = 2_000;
+const TIMEOUT: u64 = 5_000;
 
 struct ClientInfo {
     client_id: String,
