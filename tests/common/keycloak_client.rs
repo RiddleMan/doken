@@ -43,8 +43,7 @@ impl<'a> KeycloakClient<'a> {
         realm_name: &str,
         username: &str,
         password: &str,
-        client_id: &str,
-        redirect_uris: &Vec<String>,
+        clients: &Vec<(String, String)>,
     ) -> Result<()> {
         self.inner
             .post(RealmRepresentation {
@@ -60,16 +59,21 @@ impl<'a> KeycloakClient<'a> {
                     }]),
                     ..Default::default()
                 }]),
-                clients: Some(vec![ClientRepresentation {
-                    id: Some(client_id.to_owned()),
-                    enabled: Some(true),
-                    implicit_flow_enabled: Some(true),
-                    direct_access_grants_enabled: Some(true),
-                    standard_flow_enabled: Some(true),
-                    service_accounts_enabled: Some(true),
-                    redirect_uris: Some(redirect_uris.to_owned()),
-                    ..Default::default()
-                }]),
+                clients: Some(
+                    clients
+                        .iter()
+                        .map(|(client_id, redirect_uri)| ClientRepresentation {
+                            id: Some(client_id.to_owned()),
+                            enabled: Some(true),
+                            implicit_flow_enabled: Some(true),
+                            direct_access_grants_enabled: Some(true),
+                            standard_flow_enabled: Some(true),
+                            service_accounts_enabled: Some(true),
+                            redirect_uris: Some(vec![redirect_uri.to_owned()]),
+                            ..Default::default()
+                        })
+                        .collect(),
+                ),
                 ..Default::default()
             })
             .await?;

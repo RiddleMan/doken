@@ -17,11 +17,16 @@ mod common;
 const REALM_NAME: &str = "test-realm";
 const USERNAME: &str = "test-user";
 const PASSWORD: &str = "test-password";
-const CLIENT_ID: &str = "auth-client-id";
+
+struct ClientInfo {
+    client_id: String,
+    client_secret: String,
+    redirect_uri: String,
+}
 
 struct IdentityProviderInfo {
     _client: KeycloakClient<'static>,
-    client_secret: String,
+    clients: Vec<ClientInfo>,
     discovery_url: String,
     _token_url: String,
     _authorize_url: String,
@@ -29,10 +34,6 @@ struct IdentityProviderInfo {
 
 lazy_static! {
     static ref DOCKER_CLIENT: clients::Cli = clients::Cli::default();
-    static ref REDIRECT_URIS: Vec<String> = vec![
-        "http://localhost:3000/oauth/callback".to_owned(),
-        "https://wykop.pl/this/is/test/string/that/should/be/checked".to_owned(),
-    ];
     static ref TOKIO_RUNTIME: tokio::runtime::Runtime = tokio::runtime::Runtime::new().unwrap();
     static ref IDP_INFO: OnceCell<IdentityProviderInfo> = OnceCell::new();
     static ref AUTH_BROWSER: Arc<Mutex<AuthBrowser>> = {
@@ -82,17 +83,34 @@ async fn get_idp_info() -> &'static IdentityProviderInfo {
     IDP_INFO
         .get_or_init(|| async {
             let kc = KeycloakClient::new(&DOCKER_CLIENT).await.unwrap();
-            kc.create_realm(REALM_NAME, USERNAME, PASSWORD, CLIENT_ID, &REDIRECT_URIS)
+            const CLIENT_ID_1: &str = "test-client-id1";
+            const REDIRECT_URI_1: &str = "http://localhost:3000/oauth/callback";
+            const CLIENT_ID_2: &str = "test-client-id2";
+            const REDIRECT_URI_2: &str =
+                "https://wykop.pl/this/is/test/string/that/should/be/checked";
+            let clients = vec![(CLIENT_ID_1.to_owned(), REDIRECT_URI_1.to_owned()), (CLIENT_ID_2.to_owned(), REDIRECT_URI_2.to_owned())];
+            kc.create_realm(REALM_NAME, USERNAME, PASSWORD, &clients)
                 .await
                 .unwrap();
-            let client_secret = kc.get_client_secret(REALM_NAME, CLIENT_ID).await.unwrap();
-
             let discovery_url = kc.discovery_url(REALM_NAME);
             let token_url = kc.token_url(REALM_NAME);
             let authorize_url = kc.authorize_url(REALM_NAME);
+            let client_secret_1 = kc.get_client_secret(REALM_NAME, CLIENT_ID_1).await.unwrap();
+            let client_secret_2 = kc.get_client_secret(REALM_NAME, CLIENT_ID_2).await.unwrap();
             IdentityProviderInfo {
                 _client: kc,
-                client_secret,
+                clients: vec![
+                    ClientInfo {
+                        client_id: CLIENT_ID_1.to_owned(),
+                        client_secret: client_secret_1,
+                        redirect_uri: REDIRECT_URI_1.to_owned(),
+                    },
+                    ClientInfo {
+                        client_id: CLIENT_ID_2.to_owned(),
+                        client_secret: client_secret_2,
+                        redirect_uri: REDIRECT_URI_2.to_owned(),
+                    },
+                ],
                 discovery_url,
                 _token_url: token_url,
                 _authorize_url: authorize_url,
@@ -123,14 +141,14 @@ fn it_authenticates_with_authorization_code_with_pkce_grant() {
         let browser = AUTH_BROWSER.clone();
         let browser = browser.lock().await;
         remove_config_if_available();
+        let client_info = idp_info.clients.get(0).unwrap();
         let pkce_token = get_token(
             Arguments {
                 grant: Grant::AuthorizationCodeWithPkce,
                 discovery_url: Some(idp_info.discovery_url.to_owned()),
-                callback_url: Some(REDIRECT_URIS[0].to_owned()),
-                client_id: CLIENT_ID.to_owned(),
-                client_secret: Some(idp_info.client_secret.to_owned()),
-
+                callback_url: Some(client_info.redirect_uri.to_owned()),
+                client_id: client_info.client_id.to_owned(),
+                client_secret: Some(client_info.client_secret.to_owned()),
                 timeout: 1_000,
                 ..Default::default()
             },
@@ -153,30 +171,20 @@ fn it_reuses_refresh_token_provided_by_idp_when_authenticating_once_again() {
         let browser = AUTH_BROWSER.clone();
         let browser_lock = browser.lock().await;
         remove_config_if_available();
+        let client_info = idp_info.clients.get(0).unwrap();
         let args = Arguments {
-                grant: Grant::AuthorizationCodeWithPkce,
-                discovery_url: Some(idp_info.discovery_url.to_owned()),
-                callback_url: Some(REDIRECT_URIS[0].to_owned()),
-                client_id: CLIENT_ID.to_owned(),
-                client_secret: Some(idp_info.client_secret.to_owned()),
-
-                timeout: 1_000,
-                ..Default::default()
-            };
-        let _ = get_token(
-            args.to_owned(),
-            browser_lock,
-        )
-        .await
-        .unwrap();
+            grant: Grant::AuthorizationCodeWithPkce,
+            discovery_url: Some(idp_info.discovery_url.to_owned()),
+                callback_url: Some(client_info.redirect_uri.to_owned()),
+                client_id: client_info.client_id.to_owned(),
+                client_secret: Some(client_info.client_secret.to_owned()),
+            timeout: 1_000,
+            ..Default::default()
+        };
+        let _ = get_token(args.to_owned(), browser_lock).await.unwrap();
         let browser_lock = browser.lock().await;
         let page_len_before = browser_lock.pages().await.unwrap().len();
-        let _ = get_token(
-            args.to_owned(),
-            browser_lock,
-        )
-        .await
-        .unwrap();
+        let _ = get_token(args.to_owned(), browser_lock).await.unwrap();
         let browser_lock = browser.lock().await;
         let page_len_after = browser_lock.pages().await.unwrap().len();
 
@@ -194,13 +202,14 @@ fn it_authenticates_with_authorization_code_grant() {
         let browser = AUTH_BROWSER.clone();
         let browser = browser.lock().await;
         remove_config_if_available();
+        let client_info = idp_info.clients.get(1).unwrap();
         let pkce_token = get_token(
             Arguments {
                 grant: Grant::AuthorizationCode,
                 discovery_url: Some(idp_info.discovery_url.to_owned()),
-                callback_url: Some(REDIRECT_URIS[1].to_owned()),
-                client_id: CLIENT_ID.to_owned(),
-                client_secret: Some(idp_info.client_secret.to_owned()),
+                callback_url: Some(client_info.redirect_uri.to_owned()),
+                client_id: client_info.client_id.to_owned(),
+                client_secret: Some(client_info.client_secret.to_owned()),
                 timeout: 1_000,
                 ..Default::default()
             },
@@ -223,13 +232,14 @@ fn it_authenticates_with_implicit_grant() {
         let browser = AUTH_BROWSER.clone();
         let browser = browser.lock().await;
         remove_config_if_available();
+        let client_info = idp_info.clients.get(1).unwrap();
         let pkce_token = get_token(
             Arguments {
                 grant: Grant::Implicit,
                 discovery_url: Some(idp_info.discovery_url.to_owned()),
-                callback_url: Some(REDIRECT_URIS[1].to_owned()),
-                client_id: CLIENT_ID.to_owned(),
-                client_secret: Some(idp_info.client_secret.to_owned()),
+                callback_url: Some(client_info.redirect_uri.to_owned()),
+                client_id: client_info.client_id.to_owned(),
+                client_secret: Some(client_info.client_secret.to_owned()),
                 timeout: 1_000,
                 ..Default::default()
             },
@@ -252,12 +262,13 @@ fn it_authenticates_with_client_credentials_grant() {
         let browser = AUTH_BROWSER.clone();
         let browser = browser.lock().await;
         remove_config_if_available();
+        let client_info = idp_info.clients.get(0).unwrap();
         let pkce_token = get_token(
             Arguments {
                 grant: Grant::ClientCredentials,
                 discovery_url: Some(idp_info.discovery_url.to_owned()),
-                client_id: CLIENT_ID.to_owned(),
-                client_secret: Some(idp_info.client_secret.to_owned()),
+                client_id: client_info.client_id.to_owned(),
+                client_secret: Some(client_info.client_secret.to_owned()),
                 timeout: 1_000,
                 scope: "email".to_owned(),
                 ..Default::default()
@@ -281,12 +292,13 @@ fn it_authenticates_with_resource_owner_password_client_credentials_grant() {
         let browser = AUTH_BROWSER.clone();
         let browser = browser.lock().await;
         remove_config_if_available();
+        let client_info = idp_info.clients.get(0).unwrap();
         let pkce_token = get_token(
             Arguments {
                 grant: Grant::ResourceOwnerPasswordClientCredentials,
                 discovery_url: Some(idp_info.discovery_url.to_owned()),
-                client_id: CLIENT_ID.to_owned(),
-                client_secret: Some(idp_info.client_secret.to_owned()),
+                client_id: client_info.client_id.to_owned(),
+                client_secret: Some(client_info.client_secret.to_owned()),
                 username: Some(USERNAME.to_owned()),
                 password: Some(PASSWORD.to_owned()),
                 scope: "email".to_owned(),
