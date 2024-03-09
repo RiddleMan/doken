@@ -1,10 +1,9 @@
-use home::home_dir;
+use common::{remove_config_if_available, assert_token_like};
 use std::time::Duration;
 
 use doken::{args::Arguments, auth_browser::auth_browser::AuthBrowser, get_token, grant::Grant};
 use lazy_static::lazy_static;
 use serial_test::serial;
-use std::fs::remove_file;
 use std::sync::Arc;
 use testcontainers::clients;
 use tokio::sync::{Mutex, OnceCell};
@@ -120,18 +119,6 @@ async fn get_idp_info() -> &'static IdentityProviderInfo {
             }
         })
         .await
-}
-
-fn remove_config_if_available() -> () {
-    let mut doken_config = home_dir().unwrap();
-    doken_config.push(".doken.json");
-    let _ = remove_file(doken_config);
-}
-
-fn assert_token_like(s: String) -> () {
-    let token_parts: Vec<&str> = s.split('.').collect();
-
-    assert_eq!(token_parts.len(), 3);
 }
 
 #[test]
