@@ -7,7 +7,7 @@ use dotenv::dotenv;
 use crate::config_file::ConfigFile;
 use crate::grant::Grant;
 
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Clone)]
 #[clap(author, version, about)]
 #[clap(group(
     ArgGroup::new("oauth2")

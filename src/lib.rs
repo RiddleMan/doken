@@ -14,7 +14,6 @@ use crate::retrievers::token_retriever::TokenRetriever;
 use anyhow::Context;
 use anyhow::Result;
 use auth_browser::auth_browser::AuthBrowser;
-use std::process::exit;
 use tokio::sync::MutexGuard;
 
 pub mod args;
@@ -39,9 +38,9 @@ pub async fn get_token(
 
         let file_token_info = file_retriever.retrieve().await;
 
-        if file_token_info.is_ok() {
-            println!("{}", file_token_info.unwrap().access_token);
-            exit(0);
+        if let Ok(file_token_info) = file_token_info {
+            drop(auth_browser);
+            return Ok(file_token_info.access_token);
         }
     }
 
@@ -69,10 +68,16 @@ pub async fn get_token(
             drop(auth_browser);
             Box::new(ImplicitRetriever::new(&args, &oauth_client, auth_page))
         }
-        Grant::ResourceOwnerPasswordClientCredentials => Box::new(
-            ResourceOwnerPasswordClientCredentialsRetriever::new(&oauth_client),
-        ),
-        Grant::ClientCredentials => Box::new(ClientCredentialsRetriever::new(&oauth_client)),
+        Grant::ResourceOwnerPasswordClientCredentials => {
+            drop(auth_browser);
+            Box::new(
+                    ResourceOwnerPasswordClientCredentialsRetriever::new(&oauth_client),
+                )
+        },
+        Grant::ClientCredentials => {
+            drop(auth_browser);
+            Box::new(ClientCredentialsRetriever::new(&oauth_client))
+        },
     };
 
     let token_info = retriever

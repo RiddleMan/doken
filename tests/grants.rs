@@ -36,7 +36,7 @@ lazy_static! {
     static ref TOKIO_RUNTIME: tokio::runtime::Runtime = tokio::runtime::Runtime::new().unwrap();
     static ref IDP_INFO: OnceCell<IdentityProviderInfo> = OnceCell::new();
     static ref AUTH_BROWSER: Arc<Mutex<AuthBrowser>> = {
-        let browser = Arc::new(Mutex::new(AuthBrowser::new(false)));
+        let browser = Arc::new(Mutex::new(AuthBrowser::new(true)));
         let temp = browser.clone();
         TOKIO_RUNTIME.spawn(async move {
             loop {
@@ -115,7 +115,7 @@ fn assert_token_like(s: String) -> () {
 
 #[test]
 #[serial]
-fn it_authenticates_with_authorization_code_with_pkce_flow() {
+fn it_authenticates_with_authorization_code_with_pkce_grant() {
     let _ = env_logger::try_init();
     TOKIO_RUNTIME.block_on(async {
         let idp_info = get_idp_info().await;
@@ -145,7 +145,48 @@ fn it_authenticates_with_authorization_code_with_pkce_flow() {
 
 #[test]
 #[serial]
-fn it_authenticates_with_authorization_code_flow() {
+fn it_reuses_refresh_token_provided_by_idp_when_authenticating_once_again() {
+    let _ = env_logger::try_init();
+    TOKIO_RUNTIME.block_on(async {
+        let idp_info = get_idp_info().await;
+
+        let browser = AUTH_BROWSER.clone();
+        let browser_lock = browser.lock().await;
+        remove_config_if_available();
+        let args = Arguments {
+                grant: Grant::AuthorizationCodeWithPkce,
+                discovery_url: Some(idp_info.discovery_url.to_owned()),
+                callback_url: Some(REDIRECT_URIS[0].to_owned()),
+                client_id: CLIENT_ID.to_owned(),
+                client_secret: Some(idp_info.client_secret.to_owned()),
+
+                timeout: 1_000,
+                ..Default::default()
+            };
+        let _ = get_token(
+            args.to_owned(),
+            browser_lock,
+        )
+        .await
+        .unwrap();
+        let browser_lock = browser.lock().await;
+        let page_len_before = browser_lock.pages().await.unwrap().len();
+        let _ = get_token(
+            args.to_owned(),
+            browser_lock,
+        )
+        .await
+        .unwrap();
+        let browser_lock = browser.lock().await;
+        let page_len_after = browser_lock.pages().await.unwrap().len();
+
+        assert_eq!(page_len_before, page_len_after);
+    });
+}
+
+#[test]
+#[serial]
+fn it_authenticates_with_authorization_code_grant() {
     let _ = env_logger::try_init();
     TOKIO_RUNTIME.block_on(async {
         let idp_info = get_idp_info().await;
@@ -160,6 +201,95 @@ fn it_authenticates_with_authorization_code_flow() {
                 callback_url: Some(REDIRECT_URIS[1].to_owned()),
                 client_id: CLIENT_ID.to_owned(),
                 client_secret: Some(idp_info.client_secret.to_owned()),
+                timeout: 1_000,
+                ..Default::default()
+            },
+            browser,
+        )
+        .await
+        .unwrap();
+
+        assert_token_like(pkce_token);
+    });
+}
+
+#[test]
+#[serial]
+fn it_authenticates_with_implicit_grant() {
+    let _ = env_logger::try_init();
+    TOKIO_RUNTIME.block_on(async {
+        let idp_info = get_idp_info().await;
+
+        let browser = AUTH_BROWSER.clone();
+        let browser = browser.lock().await;
+        remove_config_if_available();
+        let pkce_token = get_token(
+            Arguments {
+                grant: Grant::Implicit,
+                discovery_url: Some(idp_info.discovery_url.to_owned()),
+                callback_url: Some(REDIRECT_URIS[1].to_owned()),
+                client_id: CLIENT_ID.to_owned(),
+                client_secret: Some(idp_info.client_secret.to_owned()),
+                timeout: 1_000,
+                ..Default::default()
+            },
+            browser,
+        )
+        .await
+        .unwrap();
+
+        assert_token_like(pkce_token);
+    });
+}
+
+#[test]
+#[serial]
+fn it_authenticates_with_client_credentials_grant() {
+    let _ = env_logger::try_init();
+    TOKIO_RUNTIME.block_on(async {
+        let idp_info = get_idp_info().await;
+
+        let browser = AUTH_BROWSER.clone();
+        let browser = browser.lock().await;
+        remove_config_if_available();
+        let pkce_token = get_token(
+            Arguments {
+                grant: Grant::ClientCredentials,
+                discovery_url: Some(idp_info.discovery_url.to_owned()),
+                client_id: CLIENT_ID.to_owned(),
+                client_secret: Some(idp_info.client_secret.to_owned()),
+                timeout: 1_000,
+                scope: "email".to_owned(),
+                ..Default::default()
+            },
+            browser,
+        )
+        .await
+        .unwrap();
+
+        assert_token_like(pkce_token);
+    });
+}
+
+#[test]
+#[serial]
+fn it_authenticates_with_resource_owner_password_client_credentials_grant() {
+    let _ = env_logger::try_init();
+    TOKIO_RUNTIME.block_on(async {
+        let idp_info = get_idp_info().await;
+
+        let browser = AUTH_BROWSER.clone();
+        let browser = browser.lock().await;
+        remove_config_if_available();
+        let pkce_token = get_token(
+            Arguments {
+                grant: Grant::ResourceOwnerPasswordClientCredentials,
+                discovery_url: Some(idp_info.discovery_url.to_owned()),
+                client_id: CLIENT_ID.to_owned(),
+                client_secret: Some(idp_info.client_secret.to_owned()),
+                username: Some(USERNAME.to_owned()),
+                password: Some(PASSWORD.to_owned()),
+                scope: "email".to_owned(),
                 timeout: 1_000,
                 ..Default::default()
             },
