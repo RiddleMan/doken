@@ -31,7 +31,7 @@ lazy_static! {
     static ref DOCKER_CLIENT: clients::Cli = clients::Cli::default();
     static ref REDIRECT_URIS: Vec<String> = vec![
         "http://localhost:3000/oauth/callback".to_owned(),
-        "http://localhost:5000/oauth/callback234234234234".to_owned(),
+        "https://wykop.pl/this/is/test/string/that/should/be/checked".to_owned(),
     ];
     static ref TOKIO_RUNTIME: tokio::runtime::Runtime = tokio::runtime::Runtime::new().unwrap();
     static ref IDP_INFO: OnceCell<IdentityProviderInfo> = OnceCell::new();
@@ -40,30 +40,16 @@ lazy_static! {
         let temp = browser.clone();
         TOKIO_RUNTIME.spawn(async move {
             loop {
-                log::info!("===================================================================",);
                 let browser = temp.lock().await;
-                log::info!("===================================================================",);
                 let pages = browser.pages().await.unwrap();
-                log::info!(
-                    "=================================================================== {:?}",
-                    pages.len()
-                );
                 for page in pages {
-                    log::info!(
-                        "=================================================================== {:?}",
-                        page.url().await.unwrap()
-                    );
                     let _ = page.bring_to_front().await;
                     let username_element = page.find_element(r#"input[name="username"]"#).await;
                     let password_element = page.find_element(r#"input[name="password"]"#).await;
                     let submit_element = page.find_element(r#"input[type="submit"]"#).await;
 
-                    log::info!(
-                        "=================================================================== LATER"
-                    );
                     match (username_element, password_element, submit_element) {
                         (Ok(username_element), Ok(password_element), Ok(submit_element)) => {
-                            log::info!("=================================================================== OK");
                             username_element
                                 .click()
                                 .await
@@ -71,7 +57,6 @@ lazy_static! {
                                 .type_str(USERNAME)
                                 .await
                                 .unwrap();
-                            log::info!("=================================================================== OK 1");
                             password_element
                                 .click()
                                 .await
@@ -79,16 +64,10 @@ lazy_static! {
                                 .type_str(PASSWORD)
                                 .await
                                 .unwrap();
-                            log::info!("=================================================================== OK 2");
-                            log::info!("=================================================================== OK 2.5");
                             submit_element.click().await.unwrap();
-                            log::info!("=================================================================== OK 3");
-                            sleep(Duration::from_secs(1)).await;
                         }
-                        tuple => {
-                            log::error!("{:?}", tuple.0);
-                            log::error!("{:?}", tuple.1);
-                            log::error!("{:?}", tuple.2);
+                        _ => {
+                            log::debug!("Waiting for the login page to load");
                             sleep(Duration::from_secs(1)).await;
                         }
                     }
@@ -128,6 +107,12 @@ fn remove_config_if_available() -> () {
     let _ = remove_file(doken_config);
 }
 
+fn assert_token_like(s: String) -> () {
+    let token_parts: Vec<&str> = s.split('.').collect();
+
+    assert_eq!(token_parts.len(), 3);
+}
+
 #[test]
 #[serial]
 fn it_authenticates_with_authorization_code_with_pkce_flow() {
@@ -135,8 +120,8 @@ fn it_authenticates_with_authorization_code_with_pkce_flow() {
     TOKIO_RUNTIME.block_on(async {
         let idp_info = get_idp_info().await;
 
-        let x = AUTH_BROWSER.clone();
-        let browser = x.lock().await;
+        let browser = AUTH_BROWSER.clone();
+        let browser = browser.lock().await;
         remove_config_if_available();
         let pkce_token = get_token(
             Arguments {
@@ -145,6 +130,8 @@ fn it_authenticates_with_authorization_code_with_pkce_flow() {
                 callback_url: Some(REDIRECT_URIS[0].to_owned()),
                 client_id: CLIENT_ID.to_owned(),
                 client_secret: Some(idp_info.client_secret.to_owned()),
+
+                timeout: 1_000,
                 ..Default::default()
             },
             browser,
@@ -152,9 +139,7 @@ fn it_authenticates_with_authorization_code_with_pkce_flow() {
         .await
         .unwrap();
 
-        print!("{}", pkce_token);
-
-        assert!(!pkce_token.is_empty());
+        assert_token_like(pkce_token);
     });
 }
 
@@ -165,8 +150,8 @@ fn it_authenticates_with_authorization_code_flow() {
     TOKIO_RUNTIME.block_on(async {
         let idp_info = get_idp_info().await;
 
-        let x = AUTH_BROWSER.clone();
-        let browser = x.lock().await;
+        let browser = AUTH_BROWSER.clone();
+        let browser = browser.lock().await;
         remove_config_if_available();
         let pkce_token = get_token(
             Arguments {
@@ -175,6 +160,7 @@ fn it_authenticates_with_authorization_code_flow() {
                 callback_url: Some(REDIRECT_URIS[1].to_owned()),
                 client_id: CLIENT_ID.to_owned(),
                 client_secret: Some(idp_info.client_secret.to_owned()),
+                timeout: 1_000,
                 ..Default::default()
             },
             browser,
@@ -182,8 +168,6 @@ fn it_authenticates_with_authorization_code_flow() {
         .await
         .unwrap();
 
-        print!("{}", pkce_token);
-
-        assert!(!pkce_token.is_empty());
+        assert_token_like(pkce_token);
     });
 }
