@@ -249,7 +249,6 @@ impl AuthBrowser {
     pub async fn browser(&self) -> &Browser {
         self.browser
             .get_or_init(|| async {
-                log::debug!("THIS SHOULD BE CALLED ONCE!!!!");
                 let (tx, _) = oneshot::channel::<()>();
 
                 let (browser, mut handler) = Self::launch_browser(self.headless).await.unwrap();
@@ -276,26 +275,23 @@ impl AuthBrowser {
         let browser = self.browser().await;
         let page = self.wait_for_first_page(browser).await?;
 
+        let create_new_page = || async {
+            let page_config = CreateTargetParamsBuilder::default()
+                .url("about:blank")
+                .build()
+                .map_err(|e| anyhow!(e))?;
+            browser.new_page(page_config).await.map_err(|e| anyhow!(e))
+        };
         match page.url().await? {
             Some(url) => {
                 if url == "chrome://new-tab-page/" {
                     page.goto("about:blank").await.unwrap();
                     Ok(page)
                 } else {
-                    let page_config = CreateTargetParamsBuilder::default()
-                        .url("about:blank")
-                        .build()
-                        .map_err(|e| anyhow!(e))?;
-                    browser.new_page(page_config).await.map_err(|e| anyhow!(e))
+                    create_new_page().await
                 }
             }
-            _ => {
-                let page_config = CreateTargetParamsBuilder::default()
-                    .url("about:blank")
-                    .build()
-                    .map_err(|e| anyhow!(e))?;
-                browser.new_page(page_config).await.map_err(|e| anyhow!(e))
-            }
+            _ => create_new_page().await,
         }
     }
 
