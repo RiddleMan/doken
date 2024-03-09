@@ -13,7 +13,7 @@ use crate::retrievers::resource_owner_password_client_credentials_retriever::Res
 use crate::retrievers::token_retriever::TokenRetriever;
 use anyhow::Context;
 use anyhow::Result;
-use auth_browser::auth_browser::AuthBrowser;
+use auth_browser::browser::Browser;
 use tokio::sync::MutexGuard;
 
 pub mod args;
@@ -28,7 +28,7 @@ mod token_info;
 
 pub async fn get_token(
     args: Arguments,
-    auth_browser: MutexGuard<'_, AuthBrowser>,
+    auth_browser: MutexGuard<'_, Browser>,
 ) -> Result<String> {
     let file_state = FileState::new();
     let oauth_client = OAuthClient::new(&args).await?;

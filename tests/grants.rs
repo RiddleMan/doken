@@ -1,7 +1,7 @@
 use common::{assert_token_like, remove_config_if_available};
 use std::time::Duration;
 
-use doken::{args::Arguments, auth_browser::auth_browser::AuthBrowser, get_token, grant::Grant};
+use doken::{args::Arguments, auth_browser::browser::Browser, get_token, grant::Grant};
 use lazy_static::lazy_static;
 use serial_test::serial;
 use std::sync::Arc;
@@ -35,8 +35,8 @@ lazy_static! {
     static ref DOCKER_CLIENT: clients::Cli = clients::Cli::default();
     static ref TOKIO_RUNTIME: tokio::runtime::Runtime = tokio::runtime::Runtime::new().unwrap();
     static ref IDP_INFO: OnceCell<IdentityProviderInfo> = OnceCell::new();
-    static ref AUTH_BROWSER: Arc<Mutex<AuthBrowser>> = {
-        let browser = Arc::new(Mutex::new(AuthBrowser::new(true)));
+    static ref AUTH_BROWSER: Arc<Mutex<Browser>> = {
+        let browser = Arc::new(Mutex::new(Browser::new(true)));
         let temp = browser.clone();
         TOKIO_RUNTIME.spawn(async move {
             loop {

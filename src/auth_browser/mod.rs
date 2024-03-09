@@ -1,2 +1,2 @@
-pub mod auth_browser;
-pub mod auth_page;
+pub mod browser;
+pub mod page;

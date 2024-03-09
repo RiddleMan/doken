@@ -1,34 +1,34 @@
 use anyhow::{anyhow, Result};
-use chromiumoxide::browser::{Browser, BrowserConfig};
+use chromiumoxide::browser::{Browser as CBrowser, BrowserConfig};
 use chromiumoxide::cdp::browser_protocol::target::CreateTargetParamsBuilder;
 use chromiumoxide::handler::viewport::Viewport;
-use chromiumoxide::{Handler, Page};
+use chromiumoxide::{Handler, Page as CPage};
 use futures::StreamExt;
 use std::time::Duration;
 use tokio::sync::{oneshot, OnceCell};
 
-use super::auth_page::AuthPage;
+use super::page::Page;
 
-pub struct AuthBrowser {
-    browser: OnceCell<Browser>,
+pub struct Browser {
+    browser: OnceCell<CBrowser>,
     headless: bool,
 }
 
-impl AuthBrowser {
-    pub fn new(headless: bool) -> AuthBrowser {
-        AuthBrowser {
+impl Browser {
+    pub fn new(headless: bool) -> Browser {
+        Browser {
             browser: OnceCell::new(),
             headless,
         }
     }
 
-    pub async fn open_page(&self) -> Result<AuthPage> {
+    pub async fn open_page(&self) -> Result<Page> {
         let browser_page = self.lazy_open_page().await?;
-        let page = AuthPage::new(browser_page);
+        let page = Page::new(browser_page);
         Ok(page)
     }
 
-    pub async fn browser(&self) -> &Browser {
+    pub async fn browser(&self) -> &CBrowser {
         self.browser
             .get_or_init(|| async {
                 let (tx, _) = oneshot::channel::<()>();
@@ -49,11 +49,11 @@ impl AuthBrowser {
             .await
     }
 
-    pub async fn pages(&self) -> Result<Vec<Page>> {
+    pub async fn pages(&self) -> Result<Vec<CPage>> {
         self.browser().await.pages().await.map_err(|e| anyhow!(e))
     }
 
-    async fn lazy_open_page(&self) -> Result<Page> {
+    async fn lazy_open_page(&self) -> Result<CPage> {
         let browser = self.browser().await;
         let page = self.wait_for_first_page(browser).await?;
 
@@ -77,7 +77,7 @@ impl AuthBrowser {
         }
     }
 
-    async fn wait_for_first_page(&self, browser: &Browser) -> Result<Page> {
+    async fn wait_for_first_page(&self, browser: &CBrowser) -> Result<CPage> {
         let mut retries = 10;
 
         loop {
@@ -107,7 +107,7 @@ impl AuthBrowser {
         }
     }
 
-    async fn launch_browser(headless: bool) -> Result<(Browser, Handler)> {
+    async fn launch_browser(headless: bool) -> Result<(CBrowser, Handler)> {
         log::debug!("Opening chromium instance");
         const WIDTH: u32 = 800;
         const HEIGHT: u32 = 1000;
@@ -130,7 +130,7 @@ impl AuthBrowser {
             .respect_https_errors()
             .enable_cache();
 
-        Browser::launch(config.build().map_err(|e| anyhow!(e))?)
+        CBrowser::launch(config.build().map_err(|e| anyhow!(e))?)
             .await
             .map_err(|e| anyhow!(e))
     }

@@ -5,7 +5,7 @@ use base64::Engine;
 use chromiumoxide::cdp::browser_protocol::fetch::{
     ContinueRequestParams, EventRequestPaused, FulfillRequestParams,
 };
-use chromiumoxide::Page;
+use chromiumoxide::Page as CPage;
 use futures::StreamExt;
 use oauth2::CsrfToken;
 use std::borrow::Cow;
@@ -30,13 +30,13 @@ enum RequestError {
 const CONTENT_OK: &str = "<html><head></head><body><h1>OK</h1></body></html>";
 const CONTENT_NOT_OK: &str = "<html><head></head><body><h1>NOT OK</h1></body></html>";
 
-pub struct AuthPage {
-    page: Page,
+pub struct Page {
+    page: CPage,
 }
 
-impl AuthPage {
-    pub fn new(page: Page) -> AuthPage {
-        AuthPage { page }
+impl Page {
+    pub fn new(page: CPage) -> Page {
+        Page { page }
     }
 
     async fn process_request<TResponse, F>(

@@ -1,5 +1,5 @@
 use crate::args::Arguments;
-use crate::auth_browser::auth_page::AuthPage;
+use crate::auth_browser::page::Page;
 use crate::token_info::TokenInfo;
 use crate::OAuthClient;
 use anyhow::Result;
@@ -11,14 +11,14 @@ use super::token_retriever::TokenRetriever;
 pub struct ImplicitRetriever<'a> {
     args: &'a Arguments,
     oauth_client: &'a OAuthClient<'a>,
-    auth_page: AuthPage,
+    auth_page: Page,
 }
 
 impl<'a> ImplicitRetriever<'a> {
     pub fn new<'b>(
         args: &'b Arguments,
         oauth_client: &'b OAuthClient<'b>,
-        auth_page: AuthPage,
+        auth_page: Page,
     ) -> ImplicitRetriever<'b> {
         ImplicitRetriever {
             args,

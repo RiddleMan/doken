@@ -2,7 +2,7 @@
 
 use anyhow::Result;
 use doken::args::Args;
-use doken::auth_browser::auth_browser::AuthBrowser;
+use doken::auth_browser::browser::Browser;
 use doken::get_token;
 use std::env;
 use std::process::exit;
@@ -24,7 +24,7 @@ async fn main() -> Result<()> {
     let args = Args::parse().await;
 
     {
-        let auth_browser = Mutex::new(AuthBrowser::new(false));
+        let auth_browser = Mutex::new(Browser::new(false));
         println!("{}", get_token(args, auth_browser.lock().await).await?);
     }
     exit(0);
