@@ -35,7 +35,7 @@ pub struct Page {
 }
 
 impl Page {
-    pub fn new(page: CPage) -> Page {
+    pub fn new(page: CPage) -> Self {
         Page { page }
     }
 

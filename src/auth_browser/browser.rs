@@ -15,7 +15,7 @@ pub struct Browser {
 }
 
 impl Browser {
-    pub fn new(headless: bool) -> Browser {
+    pub fn new(headless: bool) -> Self {
         Browser {
             browser: OnceCell::new(),
             headless,
