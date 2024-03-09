@@ -1,5 +1,5 @@
 use crate::args::Arguments;
-use crate::auth_browser::AuthBrowser;
+use crate::auth_browser::page::Page;
 use crate::token_info::TokenInfo;
 use crate::OAuthClient;
 use anyhow::Result;
@@ -11,14 +11,20 @@ use super::token_retriever::TokenRetriever;
 pub struct ImplicitRetriever<'a> {
     args: &'a Arguments,
     oauth_client: &'a OAuthClient<'a>,
+    auth_page: Page,
 }
 
 impl<'a> ImplicitRetriever<'a> {
     pub fn new<'b>(
         args: &'b Arguments,
         oauth_client: &'b OAuthClient<'b>,
+        auth_page: Page,
     ) -> ImplicitRetriever<'b> {
-        ImplicitRetriever { args, oauth_client }
+        ImplicitRetriever {
+            args,
+            oauth_client,
+            auth_page,
+        }
     }
 }
 
@@ -27,8 +33,13 @@ impl<'a> TokenRetriever for ImplicitRetriever<'a> {
     async fn retrieve(&self) -> Result<TokenInfo> {
         let (url, csrf) = self.oauth_client.implicit_url();
 
-        AuthBrowser::new(url, Url::parse(self.args.callback_url.as_deref().unwrap())?)?
-            .get_token_data(self.args.timeout, csrf)
+        self.auth_page
+            .get_token_data(
+                self.args.timeout,
+                url,
+                Url::parse(self.args.callback_url.as_deref().unwrap())?,
+                csrf,
+            )
             .await
     }
 }

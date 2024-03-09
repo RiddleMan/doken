@@ -1,5 +1,5 @@
 use crate::args::Arguments;
-use crate::auth_browser::AuthBrowser;
+use crate::auth_browser::page::Page;
 use crate::oauth_client::OAuthClient;
 use crate::token_info::TokenInfo;
 use anyhow::Result;
@@ -10,6 +10,7 @@ use super::token_retriever::TokenRetriever;
 
 pub struct AuthorizationCodeRetriever<'a> {
     oauth_client: &'a OAuthClient<'a>,
+    auth_page: Page,
     args: &'a Arguments,
 }
 
@@ -17,8 +18,13 @@ impl<'a> AuthorizationCodeRetriever<'a> {
     pub fn new<'b>(
         args: &'b Arguments,
         oauth_client: &'b OAuthClient<'b>,
+        auth_page: Page,
     ) -> AuthorizationCodeRetriever<'b> {
-        AuthorizationCodeRetriever { oauth_client, args }
+        AuthorizationCodeRetriever {
+            oauth_client,
+            auth_page,
+            args,
+        }
     }
 }
 
@@ -27,8 +33,14 @@ impl<'a> TokenRetriever for AuthorizationCodeRetriever<'a> {
     async fn retrieve(&self) -> Result<TokenInfo> {
         let (url, csrf, _nonce) = self.oauth_client.authorize_url(None);
 
-        let code = AuthBrowser::new(url, Url::parse(self.args.callback_url.as_deref().unwrap())?)?
-            .get_code(self.args.timeout, csrf)
+        let code = self
+            .auth_page
+            .get_code(
+                self.args.timeout,
+                url,
+                Url::parse(self.args.callback_url.as_deref().unwrap())?,
+                csrf,
+            )
             .await?;
 
         let token = self.oauth_client.exchange_code(&code, None).await?;

@@ -7,7 +7,7 @@ use dotenv::dotenv;
 use crate::config_file::ConfigFile;
 use crate::grant::Grant;
 
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Clone)]
 #[clap(author, version, about)]
 #[clap(group(
     ArgGroup::new("oauth2")
@@ -88,6 +88,30 @@ pub struct Arguments {
     /// Profile defined in ~/.doken/config.toml file
     #[clap(long)]
     pub profile: Option<String>,
+}
+
+impl Default for Arguments {
+    fn default() -> Self {
+        Self {
+            grant: Grant::AuthorizationCodeWithPkce,
+            token_url: Default::default(),
+            authorization_url: Default::default(),
+            discovery_url: Default::default(),
+            callback_url: Default::default(),
+            client_id: Default::default(),
+            client_secret: Default::default(),
+            client_secret_stdin: Default::default(),
+            username: Default::default(),
+            password: Default::default(),
+            password_stdin: Default::default(),
+            scope: Default::default(),
+            audience: Default::default(),
+            timeout: 30_000,
+            force: Default::default(),
+            debug: Default::default(),
+            profile: Default::default(),
+        }
+    }
 }
 
 pub struct Args;
