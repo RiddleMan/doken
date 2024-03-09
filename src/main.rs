@@ -4,9 +4,9 @@ use anyhow::Result;
 use doken::args::Args;
 use doken::auth_browser::auth_browser::AuthBrowser;
 use doken::get_token;
-use tokio::sync::Mutex;
 use std::env;
 use std::process::exit;
+use tokio::sync::Mutex;
 
 fn enable_debug_via_args() {
     let has_debug_flag = env::args().any(|s| s.eq("--debug") || s.eq("-d"));

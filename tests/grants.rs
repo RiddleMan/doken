@@ -1,4 +1,4 @@
-use common::{remove_config_if_available, assert_token_like};
+use common::{assert_token_like, remove_config_if_available};
 use std::time::Duration;
 
 use doken::{args::Arguments, auth_browser::auth_browser::AuthBrowser, get_token, grant::Grant};

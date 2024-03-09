@@ -63,7 +63,9 @@ impl Image for Keycloak {
     }
 
     fn ready_conditions(&self) -> Vec<WaitFor> {
-        vec![WaitFor::message_on_stdout("Running the server in development mode. DO NOT use this configuration in production.")]
+        vec![WaitFor::message_on_stdout(
+            "Running the server in development mode. DO NOT use this configuration in production.",
+        )]
     }
 
     fn env_vars(&self) -> Box<dyn Iterator<Item = (&String, &String)> + '_> {

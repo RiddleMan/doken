@@ -70,14 +70,14 @@ pub async fn get_token(
         }
         Grant::ResourceOwnerPasswordClientCredentials => {
             drop(auth_browser);
-            Box::new(
-                    ResourceOwnerPasswordClientCredentialsRetriever::new(&oauth_client),
-                )
-        },
+            Box::new(ResourceOwnerPasswordClientCredentialsRetriever::new(
+                &oauth_client,
+            ))
+        }
         Grant::ClientCredentials => {
             drop(auth_browser);
             Box::new(ClientCredentialsRetriever::new(&oauth_client))
-        },
+        }
     };
 
     let token_info = retriever

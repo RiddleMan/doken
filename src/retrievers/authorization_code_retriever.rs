@@ -20,7 +20,11 @@ impl<'a> AuthorizationCodeRetriever<'a> {
         oauth_client: &'b OAuthClient<'b>,
         auth_page: AuthPage,
     ) -> AuthorizationCodeRetriever<'b> {
-        AuthorizationCodeRetriever { oauth_client, auth_page, args }
+        AuthorizationCodeRetriever {
+            oauth_client,
+            auth_page,
+            args,
+        }
     }
 }
 

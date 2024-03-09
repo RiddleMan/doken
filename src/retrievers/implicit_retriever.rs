@@ -20,7 +20,11 @@ impl<'a> ImplicitRetriever<'a> {
         oauth_client: &'b OAuthClient<'b>,
         auth_page: AuthPage,
     ) -> ImplicitRetriever<'b> {
-        ImplicitRetriever { args, oauth_client, auth_page }
+        ImplicitRetriever {
+            args,
+            oauth_client,
+            auth_page,
+        }
     }
 }
 
@@ -30,7 +34,12 @@ impl<'a> TokenRetriever for ImplicitRetriever<'a> {
         let (url, csrf) = self.oauth_client.implicit_url();
 
         self.auth_page
-            .get_token_data(self.args.timeout,url, Url::parse(self.args.callback_url.as_deref().unwrap())?, csrf)
+            .get_token_data(
+                self.args.timeout,
+                url,
+                Url::parse(self.args.callback_url.as_deref().unwrap())?,
+                csrf,
+            )
             .await
     }
 }
