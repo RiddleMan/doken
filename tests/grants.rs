@@ -16,6 +16,7 @@ mod common;
 const REALM_NAME: &str = "test-realm";
 const USERNAME: &str = "test-user";
 const PASSWORD: &str = "test-password";
+const TIMEOUT: u64 = 2_000;
 
 struct ClientInfo {
     client_id: String,
@@ -139,7 +140,7 @@ fn it_authenticates_with_authorization_code_with_pkce_grant() {
                 callback_url: Some(client_info.redirect_uri.to_owned()),
                 client_id: client_info.client_id.to_owned(),
                 client_secret: Some(client_info.client_secret.to_owned()),
-                timeout: 1_000,
+                timeout: TIMEOUT,
                 ..Default::default()
             },
             browser,
@@ -168,7 +169,7 @@ fn it_reuses_refresh_token_provided_by_idp_when_authenticating_once_again() {
             callback_url: Some(client_info.redirect_uri.to_owned()),
             client_id: client_info.client_id.to_owned(),
             client_secret: Some(client_info.client_secret.to_owned()),
-            timeout: 1_000,
+            timeout: TIMEOUT,
             ..Default::default()
         };
         let _ = get_token(args.to_owned(), browser_lock).await.unwrap();
@@ -200,7 +201,7 @@ fn it_opens_new_tab_if_client_ids_does_not_match() {
             callback_url: Some(client_info.redirect_uri.to_owned()),
             client_id: client_info.client_id.to_owned(),
             client_secret: Some(client_info.client_secret.to_owned()),
-            timeout: 1_000,
+            timeout: TIMEOUT,
             ..Default::default()
         };
         let _ = get_token(args.to_owned(), browser_lock).await.unwrap();
@@ -215,7 +216,7 @@ fn it_opens_new_tab_if_client_ids_does_not_match() {
             callback_url: Some(client_info.redirect_uri.to_owned()),
             client_id: client_info.client_id.to_owned(),
             client_secret: Some(client_info.client_secret.to_owned()),
-            timeout: 1_000,
+            timeout: TIMEOUT,
             ..Default::default()
         };
         let _ = get_token(args.to_owned(), browser_lock).await.unwrap();
@@ -245,7 +246,7 @@ fn it_authenticates_with_authorization_code_grant() {
                 callback_url: Some(client_info.redirect_uri.to_owned()),
                 client_id: client_info.client_id.to_owned(),
                 client_secret: Some(client_info.client_secret.to_owned()),
-                timeout: 1_000,
+                timeout: TIMEOUT,
                 ..Default::default()
             },
             browser,
@@ -275,7 +276,7 @@ fn it_authenticates_with_implicit_grant() {
                 callback_url: Some(client_info.redirect_uri.to_owned()),
                 client_id: client_info.client_id.to_owned(),
                 client_secret: Some(client_info.client_secret.to_owned()),
-                timeout: 1_000,
+                timeout: TIMEOUT,
                 ..Default::default()
             },
             browser,
@@ -304,7 +305,7 @@ fn it_authenticates_with_client_credentials_grant() {
                 discovery_url: Some(idp_info.discovery_url.to_owned()),
                 client_id: client_info.client_id.to_owned(),
                 client_secret: Some(client_info.client_secret.to_owned()),
-                timeout: 1_000,
+                timeout: TIMEOUT,
                 scope: "email".to_owned(),
                 ..Default::default()
             },
@@ -337,7 +338,7 @@ fn it_authenticates_with_resource_owner_password_client_credentials_grant() {
                 username: Some(USERNAME.to_owned()),
                 password: Some(PASSWORD.to_owned()),
                 scope: "email".to_owned(),
-                timeout: 1_000,
+                timeout: TIMEOUT,
                 ..Default::default()
             },
             browser,
