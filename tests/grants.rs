@@ -131,7 +131,7 @@ fn remove_config_if_available() -> () {
 #[test]
 #[serial]
 fn it_authenticates_with_authorization_code_with_pkce_flow() {
-        let _ = env_logger::try_init();
+    let _ = env_logger::try_init();
     TOKIO_RUNTIME.block_on(async {
         let idp_info = get_idp_info().await;
 
@@ -163,27 +163,27 @@ fn it_authenticates_with_authorization_code_with_pkce_flow() {
 fn it_authenticates_with_authorization_code_flow() {
     let _ = env_logger::try_init();
     TOKIO_RUNTIME.block_on(async {
-    let idp_info = get_idp_info().await;
+        let idp_info = get_idp_info().await;
 
-    let x = AUTH_BROWSER.clone();
-    let browser = x.lock().await;
-    remove_config_if_available();
-    let pkce_token = get_token(
-        Arguments {
-            grant: Grant::AuthorizationCode,
-            discovery_url: Some(idp_info.discovery_url.to_owned()),
-            callback_url: Some(REDIRECT_URIS[1].to_owned()),
-            client_id: CLIENT_ID.to_owned(),
-            client_secret: Some(idp_info.client_secret.to_owned()),
-            ..Default::default()
-        },
-        browser,
-    )
-    .await
-    .unwrap();
+        let x = AUTH_BROWSER.clone();
+        let browser = x.lock().await;
+        remove_config_if_available();
+        let pkce_token = get_token(
+            Arguments {
+                grant: Grant::AuthorizationCode,
+                discovery_url: Some(idp_info.discovery_url.to_owned()),
+                callback_url: Some(REDIRECT_URIS[1].to_owned()),
+                client_id: CLIENT_ID.to_owned(),
+                client_secret: Some(idp_info.client_secret.to_owned()),
+                ..Default::default()
+            },
+            browser,
+        )
+        .await
+        .unwrap();
 
-    print!("{}", pkce_token);
+        print!("{}", pkce_token);
 
-    assert!(!pkce_token.is_empty());
+        assert!(!pkce_token.is_empty());
     });
 }
