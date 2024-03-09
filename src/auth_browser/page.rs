@@ -51,10 +51,7 @@ impl Page {
         F: Send + Fn(Arc<EventRequestPaused>) -> Option<TResponse> + 'static,
     {
         let (tx_browser, rx_browser) = oneshot::channel();
-        let mut request_paused = self
-            .page
-            .event_listener::<EventRequestPaused>()
-            .await?;
+        let mut request_paused = self.page.event_listener::<EventRequestPaused>().await?;
         let intercept_page = self.page.clone();
         let callback_url = callback_url.to_owned();
         tokio::spawn(async move {
