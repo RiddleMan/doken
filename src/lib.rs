@@ -26,10 +26,7 @@ mod openidc_discovery;
 mod retrievers;
 mod token_info;
 
-pub async fn get_token(
-    args: Arguments,
-    auth_browser: MutexGuard<'_, Browser>,
-) -> Result<String> {
+pub async fn get_token(args: Arguments, auth_browser: MutexGuard<'_, Browser>) -> Result<String> {
     let file_state = FileState::new();
     let oauth_client = OAuthClient::new(&args).await?;
 
@@ -39,7 +36,6 @@ pub async fn get_token(
         let file_token_info = file_retriever.retrieve().await;
 
         if let Ok(file_token_info) = file_token_info {
-            drop(auth_browser);
             return Ok(file_token_info.access_token);
         }
     }
@@ -68,16 +64,10 @@ pub async fn get_token(
             drop(auth_browser);
             Box::new(ImplicitRetriever::new(&args, &oauth_client, auth_page))
         }
-        Grant::ResourceOwnerPasswordClientCredentials => {
-            drop(auth_browser);
-            Box::new(ResourceOwnerPasswordClientCredentialsRetriever::new(
-                &oauth_client,
-            ))
-        }
-        Grant::ClientCredentials => {
-            drop(auth_browser);
-            Box::new(ClientCredentialsRetriever::new(&oauth_client))
-        }
+        Grant::ResourceOwnerPasswordClientCredentials => Box::new(
+            ResourceOwnerPasswordClientCredentialsRetriever::new(&oauth_client),
+        ),
+        Grant::ClientCredentials => Box::new(ClientCredentialsRetriever::new(&oauth_client)),
     };
 
     let token_info = retriever
