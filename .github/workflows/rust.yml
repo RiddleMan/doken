@@ -26,6 +26,8 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Build
         run: cargo build --verbose
+      - name: Test
+        run: RUST_LOG=info cargo test --verbose
       - uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
