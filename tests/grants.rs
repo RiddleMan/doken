@@ -88,7 +88,10 @@ async fn get_idp_info() -> &'static IdentityProviderInfo {
             const CLIENT_ID_2: &str = "test-client-id2";
             const REDIRECT_URI_2: &str =
                 "https://wykop.pl/this/is/test/string/that/should/be/checked";
-            let clients = vec![(CLIENT_ID_1.to_owned(), REDIRECT_URI_1.to_owned()), (CLIENT_ID_2.to_owned(), REDIRECT_URI_2.to_owned())];
+            let clients = vec![
+                (CLIENT_ID_1.to_owned(), REDIRECT_URI_1.to_owned()),
+                (CLIENT_ID_2.to_owned(), REDIRECT_URI_2.to_owned()),
+            ];
             kc.create_realm(REALM_NAME, USERNAME, PASSWORD, &clients)
                 .await
                 .unwrap();
@@ -175,9 +178,9 @@ fn it_reuses_refresh_token_provided_by_idp_when_authenticating_once_again() {
         let args = Arguments {
             grant: Grant::AuthorizationCodeWithPkce,
             discovery_url: Some(idp_info.discovery_url.to_owned()),
-                callback_url: Some(client_info.redirect_uri.to_owned()),
-                client_id: client_info.client_id.to_owned(),
-                client_secret: Some(client_info.client_secret.to_owned()),
+            callback_url: Some(client_info.redirect_uri.to_owned()),
+            client_id: client_info.client_id.to_owned(),
+            client_secret: Some(client_info.client_secret.to_owned()),
             timeout: 1_000,
             ..Default::default()
         };
@@ -189,6 +192,51 @@ fn it_reuses_refresh_token_provided_by_idp_when_authenticating_once_again() {
         let page_len_after = browser_lock.pages().await.unwrap().len();
 
         assert_eq!(page_len_before, page_len_after);
+    });
+}
+
+#[test]
+#[serial]
+fn it_opens_new_tab_if_client_ids_does_not_match() {
+    let _ = env_logger::try_init();
+    TOKIO_RUNTIME.block_on(async {
+        let idp_info = get_idp_info().await;
+
+        let browser = AUTH_BROWSER.clone();
+        let browser_lock = browser.lock().await;
+        remove_config_if_available();
+
+        let client_info = idp_info.clients.get(0).unwrap();
+        let args = Arguments {
+            grant: Grant::AuthorizationCodeWithPkce,
+            discovery_url: Some(idp_info.discovery_url.to_owned()),
+            callback_url: Some(client_info.redirect_uri.to_owned()),
+            client_id: client_info.client_id.to_owned(),
+            client_secret: Some(client_info.client_secret.to_owned()),
+            timeout: 1_000,
+            ..Default::default()
+        };
+        let _ = get_token(args.to_owned(), browser_lock).await.unwrap();
+
+        let browser_lock = browser.lock().await;
+        let page_len_before = browser_lock.pages().await.unwrap().len();
+
+        let client_info = idp_info.clients.get(1).unwrap();
+        let args = Arguments {
+            grant: Grant::AuthorizationCodeWithPkce,
+            discovery_url: Some(idp_info.discovery_url.to_owned()),
+            callback_url: Some(client_info.redirect_uri.to_owned()),
+            client_id: client_info.client_id.to_owned(),
+            client_secret: Some(client_info.client_secret.to_owned()),
+            timeout: 1_000,
+            ..Default::default()
+        };
+        let _ = get_token(args.to_owned(), browser_lock).await.unwrap();
+
+        let browser_lock = browser.lock().await;
+        let page_len_after = browser_lock.pages().await.unwrap().len();
+
+        assert_eq!(page_len_after - page_len_before, 1);
     });
 }
 
