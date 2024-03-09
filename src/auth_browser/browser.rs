@@ -88,7 +88,6 @@ impl Browser {
             match (pages.first(), retries) {
                 (Some(page), _) => {
                     log::debug!("First page found");
-                    log::debug!("Pages: {:?}", page.url().await?.unwrap());
                     return Ok(page.to_owned());
                 }
                 (None, 0) => {

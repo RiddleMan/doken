@@ -54,8 +54,7 @@ impl Page {
         let mut request_paused = self
             .page
             .event_listener::<EventRequestPaused>()
-            .await
-            .unwrap();
+            .await?;
         let intercept_page = self.page.clone();
         let callback_url = callback_url.to_owned();
         tokio::spawn(async move {
