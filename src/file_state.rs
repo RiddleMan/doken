@@ -136,6 +136,8 @@ impl FileState {
 
 #[cfg(test)]
 mod tests {
+    #![deny(warnings)]
+
     use std::{fs, time::SystemTime};
 
     use tempfile::TempDir;
@@ -158,13 +160,12 @@ mod tests {
         let (_tmp_dir, tmp_path) = get_tmp_path().unwrap();
         let mut file_state = FileState::_from(tmp_path.to_owned()).unwrap();
         const CLIENT_ID: &str = "test-client-id";
-        const ACCESS_TOKEN: &str = "test-access-token";
 
         file_state
             .upsert_token_info(
                 CLIENT_ID.to_owned(),
                 TokenInfo {
-                    access_token: ACCESS_TOKEN.to_owned(),
+                    access_token: "test-access-token".to_owned(),
                     refresh_token: None,
                     expires: None,
                     scope: None,
@@ -194,19 +195,15 @@ mod tests {
         let (_tmp_dir, tmp_path) = get_tmp_path().unwrap();
         let mut file_state = FileState::_from(tmp_path.to_owned()).unwrap();
         const CLIENT_ID: &str = "test-client-id";
-        const ACCESS_TOKEN: &str = "test-access-token";
-        const REFRESH_TOKEN: &str = "test-refresh-token";
-        const EXPIRES: SystemTime = SystemTime::UNIX_EPOCH;
-        const SCOPE: &str = "email-profile";
 
         file_state
             .upsert_token_info(
                 CLIENT_ID.to_owned(),
                 TokenInfo {
-                    access_token: ACCESS_TOKEN.to_owned(),
-                    refresh_token: Some(REFRESH_TOKEN.to_owned()),
-                    expires: Some(EXPIRES),
-                    scope: Some(SCOPE.to_owned()),
+                    access_token: "test-access-token".to_owned(),
+                    refresh_token: Some("test-refresh-token".to_owned()),
+                    expires: Some(SystemTime::UNIX_EPOCH),
+                    scope: Some("email-profile".to_owned()),
                 },
             )
             .unwrap();
@@ -236,7 +233,6 @@ mod tests {
         let (_tmp_dir, tmp_path) = get_tmp_path().unwrap();
         let mut file_state = FileState::_from(tmp_path.to_owned()).unwrap();
         const CLIENT_ID: &str = "test-client-id";
-        const ACCESS_TOKEN: &str = "test-access-token-overwrite";
 
         file_state
             .upsert_token_info(
@@ -253,7 +249,7 @@ mod tests {
             .upsert_token_info(
                 CLIENT_ID.to_owned(),
                 TokenInfo {
-                    access_token: ACCESS_TOKEN.to_owned(),
+                    access_token: "test-access-token-overwrite".to_owned(),
                     refresh_token: None,
                     expires: None,
                     scope: None,
@@ -332,13 +328,12 @@ mod tests {
         let (_tmp_dir, tmp_path) = get_tmp_path().unwrap();
         let mut file_state = FileState::_from(tmp_path.to_owned()).unwrap();
         const CLIENT_ID: &str = "test-client-id-10";
-        const ACCESS_TOKEN: &str = "test-access-token-another-one";
 
         file_state
             .upsert_token_info(
                 CLIENT_ID.to_owned(),
                 TokenInfo {
-                    access_token: ACCESS_TOKEN.to_owned(),
+                    access_token: "test-access-token-another-one".to_owned(),
                     refresh_token: None,
                     expires: None,
                     scope: None,
@@ -372,16 +367,12 @@ mod tests {
         let (_tmp_dir, tmp_path) = get_tmp_path().unwrap();
         let mut file_state = FileState::_from(tmp_path.to_owned()).unwrap();
         const CLIENT_ID: &str = "test-client-id";
-        const ACCESS_TOKEN: &str = "test-access-token";
-        const REFRESH_TOKEN: &str = "test-refresh-token";
-        const EXPIRES: SystemTime = SystemTime::UNIX_EPOCH;
-        const SCOPE: &str = "email-profile";
 
         let expected_token_info = TokenInfo {
-            access_token: ACCESS_TOKEN.to_owned(),
-            refresh_token: Some(REFRESH_TOKEN.to_owned()),
-            expires: Some(EXPIRES),
-            scope: Some(SCOPE.to_owned()),
+            access_token: "test-access-token".to_owned(),
+            refresh_token: Some("test-refresh-token".to_owned()),
+            expires: Some(SystemTime::UNIX_EPOCH),
+            scope: Some("email-profile".to_owned()),
         };
 
         file_state
