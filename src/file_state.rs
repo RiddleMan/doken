@@ -1,9 +1,12 @@
 use crate::token_info::TokenInfo;
 use anyhow::{Context, Result};
+use file_guard::{FileGuard, Lock};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::fs::OpenOptions;
+use std::io::{Read, Write};
 use std::path::PathBuf;
-use tokio::fs;
+use std::sync::Arc;
+use std::{collections::HashMap, fs::File};
 
 type ClientId = String;
 
@@ -14,11 +17,13 @@ struct DokenState {
 }
 
 pub struct FileState {
-    file_path: PathBuf,
+    file: Arc<File>,
+    _guard1: FileGuard<Arc<File>>,
+    _guard2: FileGuard<Arc<File>>,
 }
 
 impl FileState {
-    pub fn new() -> FileState {
+    pub fn new() -> Result<FileState> {
         let home_path = match home::home_dir() {
             Some(mut home_dir) => {
                 home_dir.push(".doken.json");
@@ -28,76 +33,86 @@ impl FileState {
             None => panic!("Couldn't access $HOME_DIR"),
         };
 
-        FileState {
-            file_path: home_path,
-        }
+        let file = Arc::new(OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .open(home_path)?);
+
+        let guard1 = file_guard::lock(file.clone(), Lock::Exclusive, 0, 1)?;
+        let guard2 = file_guard::lock(file.clone(), Lock::Shared, 0, 1)?;
+
+        Ok(FileState { file, _guard1: guard1, _guard2: guard2 })
     }
 
-    pub fn from(file_path: PathBuf) -> FileState {
-        FileState { file_path }
+    pub fn _from(file_path: PathBuf) -> Result<FileState> {
+        let file = Arc::new(OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .open(file_path)?);
+
+        let guard1 = file_guard::lock(file.clone(), Lock::Exclusive, 0, 1)?;
+        let guard2 = file_guard::lock(file.clone(), Lock::Shared, 0, 1)?;
+
+        Ok(FileState { file, _guard1: guard1, _guard2: guard2 })
     }
 
-    async fn read(&self) -> DokenState {
+    fn read(&mut self) -> DokenState {
         log::debug!("Reading the state file");
-        let text = fs::read_to_string(&self.file_path)
-            .await
-            .unwrap_or_default();
+        let mut text = String::new();
+        let _ = self.file.read_to_string(&mut text);
 
         let data = HashMap::new();
         serde_json::from_str::<DokenState>(&text).unwrap_or(DokenState { version: 1, data })
     }
 
-    async fn write(&self, state: &DokenState) -> Result<()> {
+    fn write(&mut self, state: &DokenState) -> Result<()> {
         log::debug!("Writing the state file");
         let state_str = serde_json::to_string(state).unwrap();
 
-        fs::write(&self.file_path, state_str)
-            .await
-            .with_context(|| {
-                format!(
-                    "Failed to write to {} file",
-                    &self.file_path.as_os_str().to_string_lossy()
-                )
-            })?;
+        self.file
+            .write_all(state_str.as_bytes())
+            .context("Failed to write to a file")?;
 
         Ok(())
     }
 
-    pub async fn read_token_info(&self, client_id: &String) -> Option<TokenInfo> {
+    pub fn read_token_info(&mut self, client_id: &String) -> Option<TokenInfo> {
         log::debug!(
             "Reading token info for client_id: {} from the state",
             client_id
         );
-        let state = self.read().await;
+        let state = self.read();
 
         state.data.get(client_id).cloned()
     }
 
-    pub async fn upsert_token_info(&self, client_id: String, token_info: TokenInfo) -> Result<()> {
+    pub fn upsert_token_info(&mut self, client_id: String, token_info: TokenInfo) -> Result<()> {
         log::debug!(
             "Saving token info: {:#?} for client_id: {} to the state",
             token_info,
             client_id
         );
-        let mut state = self.read().await;
+        let mut state = self.read();
 
         state.data.insert(client_id, token_info);
 
-        self.write(&state).await?;
+        self.write(&state)?;
 
         Ok(())
     }
 
-    pub async fn clear_token_info(&self, client_id: String) -> Result<()> {
+    pub fn clear_token_info(&mut self, client_id: String) -> Result<()> {
         log::debug!(
             "Clearing token info for client_id: {} in the state",
             client_id
         );
-        let mut state = self.read().await;
+        let mut state = self.read();
 
         state.data.remove(&client_id);
 
-        self.write(&state).await?;
+        self.write(&state)?;
 
         Ok(())
     }
@@ -105,10 +120,13 @@ impl FileState {
 
 #[cfg(test)]
 mod tests {
-    use std::time::{Duration, SystemTime};
+    use std::{
+        fs,
+        time::{Duration, SystemTime},
+    };
 
     use tempfile::TempDir;
-    use tokio::time::sleep;
+    use tokio::{time::sleep, join};
 
     use super::*;
 
@@ -123,10 +141,10 @@ mod tests {
         s.replace([' ', '\n'], "")
     }
 
-    #[tokio::test]
-    async fn it_writes_state_to_file() {
+    #[test]
+    fn it_writes_state_to_file() {
         let (_tmp_dir, tmp_path) = get_tmp_path().unwrap();
-        let file_state = FileState::from(tmp_path.to_owned());
+        let mut file_state = FileState::_from(tmp_path.to_owned()).unwrap();
         const CLIENT_ID: &str = "test-client-id";
         const ACCESS_TOKEN: &str = "test-access-token";
 
@@ -140,10 +158,9 @@ mod tests {
                     scope: None,
                 },
             )
-            .await
             .unwrap();
 
-        let content = fs::read_to_string(tmp_path).await.unwrap_or_default();
+        let content = fs::read_to_string(tmp_path).unwrap_or_default();
 
         let expected = r#"{
   "version": 1,
@@ -160,10 +177,10 @@ mod tests {
         assert_eq!(content, uglify(expected));
     }
 
-    #[tokio::test]
-    async fn it_writes_state_to_file_with_all_possible_values() {
+    #[test]
+    fn it_writes_state_to_file_with_all_possible_values() {
         let (_tmp_dir, tmp_path) = get_tmp_path().unwrap();
-        let file_state = FileState::from(tmp_path.to_owned());
+        let mut file_state = FileState::_from(tmp_path.to_owned()).unwrap();
         const CLIENT_ID: &str = "test-client-id";
         const ACCESS_TOKEN: &str = "test-access-token";
         const REFRESH_TOKEN: &str = "test-refresh-token";
@@ -180,10 +197,9 @@ mod tests {
                     scope: Some(SCOPE.to_owned()),
                 },
             )
-            .await
             .unwrap();
 
-        let content = fs::read_to_string(tmp_path).await.unwrap_or_default();
+        let content = fs::read_to_string(tmp_path).unwrap_or_default();
 
         let expected = r#"{
   "version": 1,
@@ -203,10 +219,10 @@ mod tests {
         assert_eq!(content, uglify(expected));
     }
 
-    #[tokio::test]
-    async fn it_overwrites_state_of_client_id() {
+    #[test]
+    fn it_overwrites_state_of_client_id() {
         let (_tmp_dir, tmp_path) = get_tmp_path().unwrap();
-        let file_state = FileState::from(tmp_path.to_owned());
+        let mut file_state = FileState::_from(tmp_path.to_owned()).unwrap();
         const CLIENT_ID: &str = "test-client-id";
         const ACCESS_TOKEN: &str = "test-access-token-overwrite";
 
@@ -220,7 +236,6 @@ mod tests {
                     scope: None,
                 },
             )
-            .await
             .unwrap();
         file_state
             .upsert_token_info(
@@ -232,10 +247,9 @@ mod tests {
                     scope: None,
                 },
             )
-            .await
             .unwrap();
 
-        let content = fs::read_to_string(tmp_path).await.unwrap_or_default();
+        let content = fs::read_to_string(tmp_path).unwrap_or_default();
 
         let expected = r#"{
   "version": 1,
@@ -252,10 +266,10 @@ mod tests {
         assert_eq!(content, uglify(expected));
     }
 
-    #[tokio::test]
-    async fn it_removes_client_id_data() {
+    #[test]
+    fn it_removes_client_id_data() {
         let (_tmp_dir, tmp_path) = get_tmp_path().unwrap();
-        let file_state = FileState::from(tmp_path.to_owned());
+        let mut file_state = FileState::_from(tmp_path.to_owned()).unwrap();
         const CLIENT_ID: &str = "test-client-id";
 
         file_state
@@ -268,15 +282,11 @@ mod tests {
                     scope: None,
                 },
             )
-            .await
             .unwrap();
 
-        file_state
-            .clear_token_info(CLIENT_ID.to_owned())
-            .await
-            .unwrap();
+        file_state.clear_token_info(CLIENT_ID.to_owned()).unwrap();
 
-        let content = fs::read_to_string(tmp_path).await.unwrap_or_default();
+        let content = fs::read_to_string(tmp_path).unwrap_or_default();
 
         let expected = r#"{
   "version": 1,
@@ -286,17 +296,16 @@ mod tests {
         assert_eq!(content, uglify(expected));
     }
 
-    #[tokio::test]
-    async fn it_does_not_fail_on_clearing_non_existent_state() {
+    #[test]
+    fn it_does_not_fail_on_clearing_non_existent_state() {
         let (_tmp_dir, tmp_path) = get_tmp_path().unwrap();
-        let file_state = FileState::from(tmp_path.to_owned());
+        let mut file_state = FileState::_from(tmp_path.to_owned()).unwrap();
 
         file_state
             .clear_token_info("test-client-id".to_owned())
-            .await
             .unwrap();
 
-        let content = fs::read_to_string(tmp_path).await.unwrap_or_default();
+        let content = fs::read_to_string(tmp_path).unwrap_or_default();
 
         let expected = r#"{
   "version": 1,
@@ -306,10 +315,10 @@ mod tests {
         assert_eq!(content, uglify(expected));
     }
 
-    #[tokio::test]
-    async fn it_does_not_change_other_client_id_state() {
+    #[test]
+    fn it_does_not_change_other_client_id_state() {
         let (_tmp_dir, tmp_path) = get_tmp_path().unwrap();
-        let file_state = FileState::from(tmp_path.to_owned());
+        let mut file_state = FileState::_from(tmp_path.to_owned()).unwrap();
         const CLIENT_ID: &str = "test-client-id-10";
         const ACCESS_TOKEN: &str = "test-access-token-another-one";
 
@@ -323,15 +332,13 @@ mod tests {
                     scope: None,
                 },
             )
-            .await
             .unwrap();
 
         file_state
             .clear_token_info("test-client-id-that-does-not-exist".to_owned())
-            .await
             .unwrap();
 
-        let content = fs::read_to_string(tmp_path).await.unwrap_or_default();
+        let content = fs::read_to_string(tmp_path).unwrap_or_default();
 
         let expected = r#"{
   "version": 1,
@@ -348,10 +355,10 @@ mod tests {
         assert_eq!(content, uglify(expected));
     }
 
-    #[tokio::test]
-    async fn it_reads_state_of_correct_client_id() {
+    #[test]
+    fn it_reads_state_of_correct_client_id() {
         let (_tmp_dir, tmp_path) = get_tmp_path().unwrap();
-        let file_state = FileState::from(tmp_path.to_owned());
+        let mut file_state = FileState::_from(tmp_path.to_owned()).unwrap();
         const CLIENT_ID: &str = "test-client-id";
         const ACCESS_TOKEN: &str = "test-access-token";
         const REFRESH_TOKEN: &str = "test-refresh-token";
@@ -375,17 +382,12 @@ mod tests {
                     scope: None,
                 },
             )
-            .await
             .unwrap();
         file_state
             .upsert_token_info(CLIENT_ID.to_owned(), expected_token_info.to_owned())
-            .await
             .unwrap();
 
-        let actual_token_info = file_state
-            .read_token_info(&CLIENT_ID.to_owned())
-            .await
-            .unwrap();
+        let actual_token_info = file_state.read_token_info(&CLIENT_ID.to_owned()).unwrap();
 
         assert_eq!(
             actual_token_info.access_token,
@@ -412,9 +414,9 @@ mod tests {
 
         let client_id = CLIENT_ID.to_owned();
         let tmp_path_1 = tmp_path.to_owned();
-        let handle = tokio::spawn(async move {
-            let file_state = FileState::from(tmp_path_1.to_owned());
-            sleep(Duration::from_millis(10)).await;
+        let handle1 = tokio::spawn(async move {
+            let mut file_state = FileState::_from(tmp_path_1.to_owned()).unwrap();
+            sleep(Duration::from_millis(150)).await;
             file_state
                 .upsert_token_info(
                     client_id,
@@ -425,22 +427,26 @@ mod tests {
                         scope: None,
                     },
                 )
-                .await
+                .unwrap();
+        });
+        let token = expected_token_info.to_owned();
+        let client_id = CLIENT_ID.to_owned();
+        let tmp_path_1 = tmp_path.to_owned();
+        let handle2 = tokio::spawn(async move {
+            sleep(Duration::from_millis(100)).await;
+            let mut file_state = FileState::_from(tmp_path_1.to_owned()).unwrap();
+            file_state
+                .upsert_token_info(client_id, token.to_owned())
                 .unwrap();
         });
 
-        let file_state = FileState::from(tmp_path.to_owned());
-        file_state
-            .upsert_token_info(CLIENT_ID.to_owned(), expected_token_info.to_owned())
-            .await
-            .unwrap();
+        let _ = join!(handle1, handle2);
 
-        let _ = handle.await;
+        let content = fs::read_to_string(tmp_path.to_owned()).unwrap_or_default();
+        print!("{}", content);
 
-        let actual_token_info = file_state
-            .read_token_info(&CLIENT_ID.to_owned())
-            .await
-            .unwrap();
+        let mut file_state = FileState::_from(tmp_path.to_owned()).unwrap();
+        let actual_token_info = file_state.read_token_info(&CLIENT_ID.to_owned()).unwrap();
 
         assert_eq!(
             actual_token_info.access_token,

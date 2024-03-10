@@ -18,7 +18,7 @@ impl<'a> ResourceOwnerPasswordClientCredentialsRetriever<'a> {
 
 #[async_trait(?Send)]
 impl<'a> TokenRetriever for ResourceOwnerPasswordClientCredentialsRetriever<'a> {
-    async fn retrieve(&self) -> Result<TokenInfo> {
+    async fn retrieve(&mut self) -> Result<TokenInfo> {
         Ok(TokenInfo::from_token_response(
             self.oauth_client
                 .exchange_resource_owner_password_client_credentials()
