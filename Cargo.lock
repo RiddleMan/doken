@@ -514,6 +514,7 @@ dependencies = [
  "serde_json",
  "serde_variant",
  "serial_test",
+ "tempfile",
  "testcontainers",
  "thiserror",
  "tokio",
