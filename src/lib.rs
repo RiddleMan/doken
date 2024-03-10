@@ -1,4 +1,4 @@
-// #![deny(warnings)]
+#![deny(warnings)]
 
 use crate::args::Arguments;
 use crate::file_state::FileState;
