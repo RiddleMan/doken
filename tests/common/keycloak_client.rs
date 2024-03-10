@@ -43,12 +43,13 @@ impl<'a> KeycloakClient<'a> {
         realm_name: &str,
         username: &str,
         password: &str,
-        clients: &[(String, String)],
+        clients: &[(String, String, bool)],
     ) -> Result<()> {
         self.inner
             .post(RealmRepresentation {
                 realm: Some(realm_name.to_owned()),
                 enabled: Some(true),
+                access_token_lifespan: Some(10),
                 users: Some(vec![UserRepresentation {
                     username: Some(username.to_owned()),
                     enabled: Some(true),
@@ -62,13 +63,14 @@ impl<'a> KeycloakClient<'a> {
                 clients: Some(
                     clients
                         .iter()
-                        .map(|(client_id, redirect_uri)| ClientRepresentation {
+                        .map(|(client_id, redirect_uri, public_client)| ClientRepresentation {
                             id: Some(client_id.to_owned()),
                             enabled: Some(true),
+                            public_client: Some(*public_client),
                             implicit_flow_enabled: Some(true),
                             direct_access_grants_enabled: Some(true),
                             standard_flow_enabled: Some(true),
-                            service_accounts_enabled: Some(true),
+                            service_accounts_enabled: Some(!(*public_client)),
                             redirect_uris: Some(vec![redirect_uri.to_owned()]),
                             ..Default::default()
                         })
