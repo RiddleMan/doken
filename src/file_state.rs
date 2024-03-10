@@ -3,7 +3,7 @@ use anyhow::{Context, Result};
 use file_guard::{FileGuard, Lock};
 use serde::{Deserialize, Serialize};
 use std::fs::OpenOptions;
-use std::io::{Read, Write};
+use std::io::{Read, Write, Seek};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::{collections::HashMap, fs::File};
@@ -19,7 +19,6 @@ struct DokenState {
 pub struct FileState {
     file: Arc<File>,
     _guard1: FileGuard<Arc<File>>,
-    _guard2: FileGuard<Arc<File>>,
 }
 
 impl FileState {
@@ -34,33 +33,32 @@ impl FileState {
         };
 
         let file = Arc::new(OpenOptions::new()
+                            .write(true)
             .read(true)
-            .write(true)
             .create(true)
             .open(home_path)?);
 
         let guard1 = file_guard::lock(file.clone(), Lock::Exclusive, 0, 1)?;
-        let guard2 = file_guard::lock(file.clone(), Lock::Shared, 0, 1)?;
 
-        Ok(FileState { file, _guard1: guard1, _guard2: guard2 })
+        Ok(FileState { file, _guard1: guard1, })
     }
 
     pub fn _from(file_path: PathBuf) -> Result<FileState> {
         let file = Arc::new(OpenOptions::new()
+                            .write(true)
             .read(true)
-            .write(true)
             .create(true)
             .open(file_path)?);
 
         let guard1 = file_guard::lock(file.clone(), Lock::Exclusive, 0, 1)?;
-        let guard2 = file_guard::lock(file.clone(), Lock::Shared, 0, 1)?;
 
-        Ok(FileState { file, _guard1: guard1, _guard2: guard2 })
+        Ok(FileState { file, _guard1: guard1, })
     }
 
     fn read(&mut self) -> DokenState {
         log::debug!("Reading the state file");
         let mut text = String::new();
+        self.file.seek(std::io::SeekFrom::Start(0)).unwrap();
         let _ = self.file.read_to_string(&mut text);
 
         let data = HashMap::new();
@@ -71,9 +69,12 @@ impl FileState {
         log::debug!("Writing the state file");
         let state_str = serde_json::to_string(state).unwrap();
 
+        let str_bytes = state_str.as_bytes();
+        self.file.set_len(str_bytes.len().try_into()?)?;
         self.file
-            .write_all(state_str.as_bytes())
+            .write_all(str_bytes)
             .context("Failed to write to a file")?;
+        self.file.flush()?;
 
         Ok(())
     }
@@ -442,7 +443,7 @@ mod tests {
 
         let _ = join!(handle1, handle2);
 
-        let content = fs::read_to_string(tmp_path.to_owned()).unwrap_or_default();
+        let content = fs::read_to_string(tmp_path).unwrap_or_default();
         print!("{}", content);
 
         let mut file_state = FileState::_from(tmp_path.to_owned()).unwrap();

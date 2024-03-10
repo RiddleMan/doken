@@ -28,17 +28,17 @@ mod token_info;
 
 pub async fn get_token(args: Arguments, auth_browser: MutexGuard<'_, Browser>) -> Result<String> {
     let oauth_client = OAuthClient::new(&args).await?;
-    // let mut file_state = FileState::new()?;
-    //
-    // if !args.force {
-    //     let mut file_retriever = FileRetriever::new(&args, &oauth_client, &mut file_state);
-    //
-    //     let file_token_info = file_retriever.retrieve().await;
-    //
-    //     if let Ok(file_token_info) = file_token_info {
-    //         return Ok(file_token_info.access_token);
-    //     }
-    // }
+    let mut file_state = FileState::new()?;
+
+    if !args.force {
+        let mut file_retriever = FileRetriever::new(&args, &oauth_client, &mut file_state);
+
+        let file_token_info = file_retriever.retrieve().await;
+
+        if let Ok(file_token_info) = file_token_info {
+            return Ok(file_token_info.access_token);
+        }
+    }
 
     let mut retriever: Box<dyn TokenRetriever> = match args.grant {
         Grant::AuthorizationCodeWithPkce { .. } => {
@@ -75,9 +75,9 @@ pub async fn get_token(args: Arguments, auth_browser: MutexGuard<'_, Browser>) -
         .await
         .context("Failed to retrieve a token")?;
 
-    // file_state
-    //     .upsert_token_info(args.client_id.to_owned(), token_info.to_owned())
-    //     .unwrap();
+    file_state
+        .upsert_token_info(args.client_id.to_owned(), token_info.to_owned())
+        .unwrap();
 
     Ok(token_info.access_token)
 }
