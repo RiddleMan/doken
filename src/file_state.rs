@@ -40,7 +40,7 @@ impl FileState {
             .open(home_path)?);
 
         let guard1 = file_guard::lock(file.clone(), Lock::Exclusive, 0, 1)?;
-        let guard2 = file_guard::lock(file.clone(), Lock::Shared, 1, 2)?;
+        let guard2 = file_guard::lock(file.clone(), Lock::Shared, 0, 1)?;
 
         Ok(FileState { file, _guard1: guard1, _guard2: guard2 })
     }
@@ -53,7 +53,7 @@ impl FileState {
             .open(file_path)?);
 
         let guard1 = file_guard::lock(file.clone(), Lock::Exclusive, 0, 1)?;
-        let guard2 = file_guard::lock(file.clone(), Lock::Shared, 1, 2)?;
+        let guard2 = file_guard::lock(file.clone(), Lock::Shared, 0, 1)?;
 
         Ok(FileState { file, _guard1: guard1, _guard2: guard2 })
     }
