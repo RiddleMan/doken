@@ -27,11 +27,11 @@ mod retrievers;
 mod token_info;
 
 pub async fn get_token(args: Arguments, auth_browser: MutexGuard<'_, Browser>) -> Result<String> {
-    let file_state = FileState::new();
     let oauth_client = OAuthClient::new(&args).await?;
+    let mut file_state = FileState::new()?;
 
     if !args.force {
-        let file_retriever = FileRetriever::new(&args, &oauth_client);
+        let mut file_retriever = FileRetriever::new(&args, &oauth_client, &mut file_state);
 
         let file_token_info = file_retriever.retrieve().await;
 
@@ -40,7 +40,7 @@ pub async fn get_token(args: Arguments, auth_browser: MutexGuard<'_, Browser>) -
         }
     }
 
-    let retriever: Box<dyn TokenRetriever> = match args.grant {
+    let mut retriever: Box<dyn TokenRetriever> = match args.grant {
         Grant::AuthorizationCodeWithPkce { .. } => {
             let auth_page = auth_browser.open_page().await?;
             drop(auth_browser);
@@ -77,7 +77,7 @@ pub async fn get_token(args: Arguments, auth_browser: MutexGuard<'_, Browser>) -
 
     file_state
         .upsert_token_info(args.client_id.to_owned(), token_info.to_owned())
-        .await?;
+        .unwrap();
 
     Ok(token_info.access_token)
 }

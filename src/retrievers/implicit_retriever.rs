@@ -30,7 +30,7 @@ impl<'a> ImplicitRetriever<'a> {
 
 #[async_trait(?Send)]
 impl<'a> TokenRetriever for ImplicitRetriever<'a> {
-    async fn retrieve(&self) -> Result<TokenInfo> {
+    async fn retrieve(&mut self) -> Result<TokenInfo> {
         let (url, csrf) = self.oauth_client.implicit_url();
 
         self.auth_page

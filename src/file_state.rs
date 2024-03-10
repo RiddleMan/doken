@@ -1,9 +1,12 @@
 use crate::token_info::TokenInfo;
 use anyhow::{Context, Result};
+use file_guard::{FileGuard, Lock};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::fs::OpenOptions;
+use std::io::{Read, Seek, Write};
 use std::path::PathBuf;
-use tokio::fs;
+use std::sync::Arc;
+use std::{collections::HashMap, fs::File};
 
 type ClientId = String;
 
@@ -14,11 +17,13 @@ struct DokenState {
 }
 
 pub struct FileState {
-    file_path: PathBuf,
+    file: Arc<File>,
+    _guard1: FileGuard<Arc<File>>,
+    _guard2: FileGuard<Arc<File>>,
 }
 
 impl FileState {
-    pub fn new() -> FileState {
+    pub fn new() -> Result<FileState> {
         let home_path = match home::home_dir() {
             Some(mut home_dir) => {
                 home_dir.push(".doken.json");
@@ -28,73 +33,374 @@ impl FileState {
             None => panic!("Couldn't access $HOME_DIR"),
         };
 
-        FileState {
-            file_path: home_path,
-        }
+        let file = Arc::new(
+            OpenOptions::new()
+                .write(true)
+                .read(true)
+                .create(true)
+                .open(home_path)?,
+        );
+
+        let guard1 = file_guard::lock(file.clone(), Lock::Exclusive, 0, 1)?;
+        let guard2 = file_guard::lock(file.clone(), Lock::Shared, 0, 1)?;
+
+        Ok(FileState {
+            file,
+            _guard1: guard1,
+            _guard2: guard2,
+        })
     }
 
-    async fn read(&self) -> DokenState {
+    pub fn _from(file_path: PathBuf) -> Result<FileState> {
+        let file = Arc::new(
+            OpenOptions::new()
+                .write(true)
+                .read(true)
+                .create(true)
+                .open(file_path)?,
+        );
+
+        let guard1 = file_guard::lock(file.clone(), Lock::Exclusive, 0, 1)?;
+        let guard2 = file_guard::lock(file.clone(), Lock::Shared, 0, 1)?;
+
+        Ok(FileState {
+            file,
+            _guard1: guard1,
+            _guard2: guard2,
+        })
+    }
+
+    fn read(&mut self) -> DokenState {
         log::debug!("Reading the state file");
-        let text = fs::read_to_string(&self.file_path)
-            .await
-            .unwrap_or_default();
+        let mut text = String::new();
+        let _ = self.file.seek(std::io::SeekFrom::Start(0));
+        let _ = self.file.read_to_string(&mut text);
 
         let data = HashMap::new();
         serde_json::from_str::<DokenState>(&text).unwrap_or(DokenState { version: 1, data })
     }
 
-    async fn write(&self, state: &DokenState) -> Result<()> {
+    fn write(&mut self, state: &DokenState) -> Result<()> {
         log::debug!("Writing the state file");
         let state_str = serde_json::to_string(state).unwrap();
 
-        fs::write(&self.file_path, state_str)
-            .await
-            .with_context(|| {
-                format!(
-                    "Failed to write to {} file",
-                    &self.file_path.as_os_str().to_string_lossy()
-                )
-            })?;
+        self.file.seek(std::io::SeekFrom::Start(0))?;
+        self.file.set_len(0)?;
+        self.file
+            .write_all(state_str.as_bytes())
+            .context("Failed to write to a file")?;
+        self.file.flush()?;
 
         Ok(())
     }
 
-    pub async fn read_token_info(&self, client_id: &String) -> Option<TokenInfo> {
+    pub fn read_token_info(&mut self, client_id: &String) -> Option<TokenInfo> {
         log::debug!(
             "Reading token info for client_id: {} from the state",
             client_id
         );
-        let state = self.read().await;
+        let state = self.read();
 
         state.data.get(client_id).cloned()
     }
 
-    pub async fn upsert_token_info(&self, client_id: String, token_info: TokenInfo) -> Result<()> {
+    pub fn upsert_token_info(&mut self, client_id: String, token_info: TokenInfo) -> Result<()> {
         log::debug!(
             "Saving token info: {:#?} for client_id: {} to the state",
             token_info,
             client_id
         );
-        let mut state = self.read().await;
+        let mut state = self.read();
 
         state.data.insert(client_id, token_info);
 
-        self.write(&state).await?;
+        self.write(&state)?;
 
         Ok(())
     }
 
-    pub async fn clear_token_info(&self, client_id: String) -> Result<()> {
+    pub fn clear_token_info(&mut self, client_id: String) -> Result<()> {
         log::debug!(
             "Clearing token info for client_id: {} in the state",
             client_id
         );
-        let mut state = self.read().await;
+        let mut state = self.read();
 
         state.data.remove(&client_id);
 
-        self.write(&state).await?;
+        self.write(&state)?;
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #![deny(warnings)]
+
+    use std::{fs, time::SystemTime};
+
+    use tempfile::TempDir;
+
+    use super::*;
+
+    fn get_tmp_path() -> Result<(TempDir, PathBuf)> {
+        let tmp_dir = tempfile::tempdir()?;
+        let mut path = tmp_dir.path().to_owned();
+        path.push(".doken.json");
+        Ok((tmp_dir, path))
+    }
+
+    fn uglify(s: &str) -> String {
+        s.replace([' ', '\n'], "")
+    }
+
+    #[test]
+    fn it_writes_state_to_file() {
+        let (_tmp_dir, tmp_path) = get_tmp_path().unwrap();
+        let mut file_state = FileState::_from(tmp_path.to_owned()).unwrap();
+        const CLIENT_ID: &str = "test-client-id";
+
+        file_state
+            .upsert_token_info(
+                CLIENT_ID.to_owned(),
+                TokenInfo {
+                    access_token: "test-access-token".to_owned(),
+                    refresh_token: None,
+                    expires: None,
+                    scope: None,
+                },
+            )
+            .unwrap();
+
+        let content = fs::read_to_string(tmp_path).unwrap_or_default();
+
+        let expected = r#"{
+  "version": 1,
+  "data": {
+    "test-client-id": {
+      "access_token": "test-access-token",
+      "refresh_token": null,
+      "expires": null,
+      "scope": null
+    }
+  }
+}"#;
+
+        assert_eq!(content, uglify(expected));
+    }
+
+    #[test]
+    fn it_writes_state_to_file_with_all_possible_values() {
+        let (_tmp_dir, tmp_path) = get_tmp_path().unwrap();
+        let mut file_state = FileState::_from(tmp_path.to_owned()).unwrap();
+        const CLIENT_ID: &str = "test-client-id";
+
+        file_state
+            .upsert_token_info(
+                CLIENT_ID.to_owned(),
+                TokenInfo {
+                    access_token: "test-access-token".to_owned(),
+                    refresh_token: Some("test-refresh-token".to_owned()),
+                    expires: Some(SystemTime::UNIX_EPOCH),
+                    scope: Some("email-profile".to_owned()),
+                },
+            )
+            .unwrap();
+
+        let content = fs::read_to_string(tmp_path).unwrap_or_default();
+
+        let expected = r#"{
+  "version": 1,
+  "data": {
+    "test-client-id": {
+      "access_token": "test-access-token",
+      "refresh_token": "test-refresh-token",
+      "expires": {
+        "secs_since_epoch": 0,
+        "nanos_since_epoch": 0
+      },
+      "scope": "email-profile"
+    }
+  }
+}"#;
+
+        assert_eq!(content, uglify(expected));
+    }
+
+    #[test]
+    fn it_overwrites_state_of_client_id() {
+        let (_tmp_dir, tmp_path) = get_tmp_path().unwrap();
+        let mut file_state = FileState::_from(tmp_path.to_owned()).unwrap();
+        const CLIENT_ID: &str = "test-client-id";
+
+        file_state
+            .upsert_token_info(
+                CLIENT_ID.to_owned(),
+                TokenInfo {
+                    access_token: "not-important".to_owned(),
+                    refresh_token: None,
+                    expires: None,
+                    scope: None,
+                },
+            )
+            .unwrap();
+        file_state
+            .upsert_token_info(
+                CLIENT_ID.to_owned(),
+                TokenInfo {
+                    access_token: "test-access-token-overwrite".to_owned(),
+                    refresh_token: None,
+                    expires: None,
+                    scope: None,
+                },
+            )
+            .unwrap();
+
+        let content = fs::read_to_string(tmp_path).unwrap_or_default();
+
+        let expected = r#"{
+  "version": 1,
+  "data": {
+    "test-client-id": {
+      "access_token": "test-access-token-overwrite",
+      "refresh_token": null,
+      "expires": null,
+      "scope": null
+    }
+  }
+}"#;
+
+        assert_eq!(content, uglify(expected));
+    }
+
+    #[test]
+    fn it_removes_client_id_data() {
+        let (_tmp_dir, tmp_path) = get_tmp_path().unwrap();
+        let mut file_state = FileState::_from(tmp_path.to_owned()).unwrap();
+        const CLIENT_ID: &str = "test-client-id";
+
+        file_state
+            .upsert_token_info(
+                CLIENT_ID.to_owned(),
+                TokenInfo {
+                    access_token: "not-important".to_owned(),
+                    refresh_token: None,
+                    expires: None,
+                    scope: None,
+                },
+            )
+            .unwrap();
+
+        file_state.clear_token_info(CLIENT_ID.to_owned()).unwrap();
+
+        let content = fs::read_to_string(tmp_path).unwrap_or_default();
+
+        let expected = r#"{
+  "version": 1,
+  "data": {}
+}"#;
+
+        assert_eq!(content, uglify(expected));
+    }
+
+    #[test]
+    fn it_does_not_fail_on_clearing_non_existent_state() {
+        let (_tmp_dir, tmp_path) = get_tmp_path().unwrap();
+        let mut file_state = FileState::_from(tmp_path.to_owned()).unwrap();
+
+        file_state
+            .clear_token_info("test-client-id".to_owned())
+            .unwrap();
+
+        let content = fs::read_to_string(tmp_path).unwrap_or_default();
+
+        let expected = r#"{
+  "version": 1,
+  "data": {}
+}"#;
+
+        assert_eq!(content, uglify(expected));
+    }
+
+    #[test]
+    fn it_does_not_change_other_client_id_state() {
+        let (_tmp_dir, tmp_path) = get_tmp_path().unwrap();
+        let mut file_state = FileState::_from(tmp_path.to_owned()).unwrap();
+        const CLIENT_ID: &str = "test-client-id-10";
+
+        file_state
+            .upsert_token_info(
+                CLIENT_ID.to_owned(),
+                TokenInfo {
+                    access_token: "test-access-token-another-one".to_owned(),
+                    refresh_token: None,
+                    expires: None,
+                    scope: None,
+                },
+            )
+            .unwrap();
+
+        file_state
+            .clear_token_info("test-client-id-that-does-not-exist".to_owned())
+            .unwrap();
+
+        let content = fs::read_to_string(tmp_path).unwrap_or_default();
+
+        let expected = r#"{
+  "version": 1,
+  "data": {
+    "test-client-id-10": {
+      "access_token": "test-access-token-another-one",
+      "refresh_token": null,
+      "expires": null,
+      "scope": null
+    }
+  }
+}"#;
+
+        assert_eq!(content, uglify(expected));
+    }
+
+    #[test]
+    fn it_reads_state_of_correct_client_id() {
+        let (_tmp_dir, tmp_path) = get_tmp_path().unwrap();
+        let mut file_state = FileState::_from(tmp_path.to_owned()).unwrap();
+        const CLIENT_ID: &str = "test-client-id";
+
+        let expected_token_info = TokenInfo {
+            access_token: "test-access-token".to_owned(),
+            refresh_token: Some("test-refresh-token".to_owned()),
+            expires: Some(SystemTime::UNIX_EPOCH),
+            scope: Some("email-profile".to_owned()),
+        };
+
+        file_state
+            .upsert_token_info(
+                "not-important".to_owned(),
+                TokenInfo {
+                    access_token: "not-important".to_owned(),
+                    refresh_token: None,
+                    expires: None,
+                    scope: None,
+                },
+            )
+            .unwrap();
+        file_state
+            .upsert_token_info(CLIENT_ID.to_owned(), expected_token_info.to_owned())
+            .unwrap();
+
+        let actual_token_info = file_state.read_token_info(&CLIENT_ID.to_owned()).unwrap();
+
+        assert_eq!(
+            actual_token_info.access_token,
+            expected_token_info.access_token
+        );
+        assert_eq!(
+            actual_token_info.refresh_token,
+            expected_token_info.refresh_token
+        );
+        assert_eq!(actual_token_info.expires, expected_token_info.expires);
+        assert_eq!(actual_token_info.scope, expected_token_info.scope);
     }
 }
