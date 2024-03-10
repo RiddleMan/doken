@@ -90,8 +90,7 @@ async fn get_idp_info() -> &'static IdentityProviderInfo {
             const REDIRECT_URI_2: &str =
                 "https://wykop.pl/this/is/test/string/that/should/be/checked";
             const CLIENT_ID_3: &str = "test-client-id3";
-            const REDIRECT_URI_3: &str =
-                "https://localhost:1234/test/callback";
+            const REDIRECT_URI_3: &str = "https://localhost:1234/test/callback";
             let clients = vec![
                 (CLIENT_ID_1.to_owned(), REDIRECT_URI_1.to_owned(), false),
                 (CLIENT_ID_2.to_owned(), REDIRECT_URI_2.to_owned(), false),

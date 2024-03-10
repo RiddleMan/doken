@@ -67,17 +67,19 @@ impl<'a> KeycloakClient<'a> {
                 clients: Some(
                     clients
                         .iter()
-                        .map(|(client_id, redirect_uri, public_client)| ClientRepresentation {
-                            id: Some(client_id.to_owned()),
-                            enabled: Some(true),
-                            public_client: Some(*public_client),
-                            implicit_flow_enabled: Some(true),
-                            direct_access_grants_enabled: Some(true),
-                            standard_flow_enabled: Some(true),
-                            service_accounts_enabled: Some(!(*public_client)),
-                            redirect_uris: Some(vec![redirect_uri.to_owned()]),
-                            ..Default::default()
-                        })
+                        .map(
+                            |(client_id, redirect_uri, public_client)| ClientRepresentation {
+                                id: Some(client_id.to_owned()),
+                                enabled: Some(true),
+                                public_client: Some(*public_client),
+                                implicit_flow_enabled: Some(true),
+                                direct_access_grants_enabled: Some(true),
+                                standard_flow_enabled: Some(true),
+                                service_accounts_enabled: Some(!(*public_client)),
+                                redirect_uris: Some(vec![redirect_uri.to_owned()]),
+                                ..Default::default()
+                            },
+                        )
                         .collect(),
                 ),
                 ..Default::default()
