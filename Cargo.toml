@@ -37,10 +37,6 @@ base64 = "0.22.0"
 toml = "0.8.10"
 serde_variant = "0.1.2"
 rand = "0.8.5"
-testcontainers = { version = "0.15.0", features = ["tokio"] }
-keycloak = "21.0.102"
-lazy_static = "1.4.0"
-serial_test = "3.0.0"
 file-guard = "0.2.0"
 
 # The profile that 'cargo dist' will build with
@@ -67,3 +63,7 @@ pr-run-mode = "plan"
 
 [dev-dependencies]
 tempfile = "3.10.1"
+testcontainers = { version = "0.15.0", features = ["tokio"] }
+keycloak = "21.0.102"
+lazy_static = "1.4.0"
+serial_test = "3.0.0"
