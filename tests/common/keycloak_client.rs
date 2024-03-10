@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use anyhow::Result;
 use keycloak::{
     types::{
@@ -17,6 +19,8 @@ pub struct KeycloakClient<'a> {
     _container: Container<'a, Keycloak>,
     url: String,
 }
+
+pub const ACCESS_TOKEN_LIFESPAN: Duration = Duration::from_secs(30);
 
 impl<'a> KeycloakClient<'a> {
     pub async fn new(docker: &'a clients::Cli) -> Result<KeycloakClient<'a>> {
@@ -49,7 +53,7 @@ impl<'a> KeycloakClient<'a> {
             .post(RealmRepresentation {
                 realm: Some(realm_name.to_owned()),
                 enabled: Some(true),
-                access_token_lifespan: Some(10),
+                access_token_lifespan: Some(ACCESS_TOKEN_LIFESPAN.as_secs().try_into().unwrap()),
                 users: Some(vec![UserRepresentation {
                     username: Some(username.to_owned()),
                     enabled: Some(true),
