@@ -33,7 +33,7 @@ impl<'a> OAuthClient<'a> {
 
         let mut client = BasicClient::new(
             ClientId::new(args.client_id.to_owned()),
-            args.client_secret.clone().map(ClientSecret::new),
+            args.client_secret.to_owned().map(ClientSecret::new),
             AuthUrl::new(authorization_url.to_owned()).with_context(|| {
                 format!(
                     "`--authorization-url` is not a correct absolute URL. Provided value: {}",
@@ -108,7 +108,7 @@ impl<'a> OAuthClient<'a> {
         let nonce = Alphanumeric.sample_string(&mut rand::thread_rng(), 16);
         let mut builder = self.authorization_url_builder();
 
-        builder = builder.add_extra_param("nonce", nonce.clone());
+        builder = builder.add_extra_param("nonce", nonce.to_owned());
 
         if let Some(challenge) = pkce_challenge {
             builder = builder.set_pkce_challenge(challenge);

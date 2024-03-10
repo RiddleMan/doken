@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use anyhow::Result;
 use keycloak::{
     types::{
@@ -17,6 +19,8 @@ pub struct KeycloakClient<'a> {
     _container: Container<'a, Keycloak>,
     url: String,
 }
+
+pub const ACCESS_TOKEN_LIFESPAN: Duration = Duration::from_secs(30);
 
 impl<'a> KeycloakClient<'a> {
     pub async fn new(docker: &'a clients::Cli) -> Result<KeycloakClient<'a>> {
@@ -43,12 +47,13 @@ impl<'a> KeycloakClient<'a> {
         realm_name: &str,
         username: &str,
         password: &str,
-        clients: &[(String, String)],
+        clients: &[(String, String, bool)],
     ) -> Result<()> {
         self.inner
             .post(RealmRepresentation {
                 realm: Some(realm_name.to_owned()),
                 enabled: Some(true),
+                access_token_lifespan: Some(ACCESS_TOKEN_LIFESPAN.as_secs().try_into().unwrap()),
                 users: Some(vec![UserRepresentation {
                     username: Some(username.to_owned()),
                     enabled: Some(true),
@@ -62,16 +67,19 @@ impl<'a> KeycloakClient<'a> {
                 clients: Some(
                     clients
                         .iter()
-                        .map(|(client_id, redirect_uri)| ClientRepresentation {
-                            id: Some(client_id.to_owned()),
-                            enabled: Some(true),
-                            implicit_flow_enabled: Some(true),
-                            direct_access_grants_enabled: Some(true),
-                            standard_flow_enabled: Some(true),
-                            service_accounts_enabled: Some(true),
-                            redirect_uris: Some(vec![redirect_uri.to_owned()]),
-                            ..Default::default()
-                        })
+                        .map(
+                            |(client_id, redirect_uri, public_client)| ClientRepresentation {
+                                id: Some(client_id.to_owned()),
+                                enabled: Some(true),
+                                public_client: Some(*public_client),
+                                implicit_flow_enabled: Some(true),
+                                direct_access_grants_enabled: Some(true),
+                                standard_flow_enabled: Some(true),
+                                service_accounts_enabled: Some(!(*public_client)),
+                                redirect_uris: Some(vec![redirect_uri.to_owned()]),
+                                ..Default::default()
+                            },
+                        )
                         .collect(),
                 ),
                 ..Default::default()
