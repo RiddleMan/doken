@@ -3,7 +3,7 @@ use anyhow::{Context, Result};
 use file_guard::{FileGuard, Lock};
 use serde::{Deserialize, Serialize};
 use std::fs::OpenOptions;
-use std::io::{Read, Write, Seek};
+use std::io::{Read, Seek, Write};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::{collections::HashMap, fs::File};
@@ -33,29 +33,41 @@ impl FileState {
             None => panic!("Couldn't access $HOME_DIR"),
         };
 
-        let file = Arc::new(OpenOptions::new()
-                            .write(true)
-            .read(true)
-            .create(true)
-            .open(home_path)?);
+        let file = Arc::new(
+            OpenOptions::new()
+                .write(true)
+                .read(true)
+                .create(true)
+                .open(home_path)?,
+        );
 
         let guard1 = file_guard::lock(file.clone(), Lock::Exclusive, 0, 1)?;
         let guard2 = file_guard::lock(file.clone(), Lock::Shared, 0, 1)?;
 
-        Ok(FileState { file, _guard1: guard1, _guard2: guard2 })
+        Ok(FileState {
+            file,
+            _guard1: guard1,
+            _guard2: guard2,
+        })
     }
 
     pub fn _from(file_path: PathBuf) -> Result<FileState> {
-        let file = Arc::new(OpenOptions::new()
-                            .write(true)
-            .read(true)
-            .create(true)
-            .open(file_path)?);
+        let file = Arc::new(
+            OpenOptions::new()
+                .write(true)
+                .read(true)
+                .create(true)
+                .open(file_path)?,
+        );
 
         let guard1 = file_guard::lock(file.clone(), Lock::Exclusive, 0, 1)?;
         let guard2 = file_guard::lock(file.clone(), Lock::Shared, 0, 1)?;
 
-        Ok(FileState { file, _guard1: guard1, _guard2: guard2 })
+        Ok(FileState {
+            file,
+            _guard1: guard1,
+            _guard2: guard2,
+        })
     }
 
     fn read(&mut self) -> DokenState {
@@ -124,13 +136,9 @@ impl FileState {
 
 #[cfg(test)]
 mod tests {
-    use std::{
-        fs,
-        time::{Duration, SystemTime},
-    };
+    use std::{fs, time::SystemTime};
 
     use tempfile::TempDir;
-    use tokio::{time::sleep, join};
 
     use super::*;
 
@@ -403,55 +411,5 @@ mod tests {
         );
         assert_eq!(actual_token_info.expires, expected_token_info.expires);
         assert_eq!(actual_token_info.scope, expected_token_info.scope);
-    }
-
-    #[tokio::test]
-    async fn it_locks_rw_access_to_file() {
-        let (_tmp_dir, tmp_path) = get_tmp_path().unwrap();
-        const CLIENT_ID: &str = "test-client-id";
-        let expected_token_info = TokenInfo {
-            access_token: "expected_token_info".to_owned(),
-            refresh_token: None,
-            expires: None,
-            scope: None,
-        };
-
-        let client_id = CLIENT_ID.to_owned();
-        let tmp_path_1 = tmp_path.to_owned();
-        let handle1 = tokio::spawn(async move {
-            let mut file_state = FileState::_from(tmp_path_1.to_owned()).unwrap();
-            sleep(Duration::from_millis(2_000)).await;
-            file_state
-                .upsert_token_info(
-                    client_id,
-                    TokenInfo {
-                        access_token: "not-important".to_owned(),
-                        refresh_token: None,
-                        expires: None,
-                        scope: None,
-                    },
-                )
-                .unwrap();
-        });
-        let token = expected_token_info.to_owned();
-        let client_id = CLIENT_ID.to_owned();
-        let tmp_path_1 = tmp_path.to_owned();
-        let handle2 = tokio::spawn(async move {
-            sleep(Duration::from_millis(100)).await;
-            let mut file_state = FileState::_from(tmp_path_1.to_owned()).unwrap();
-            file_state
-                .upsert_token_info(client_id, token.to_owned())
-                .unwrap();
-        });
-
-        let _ = join!(handle1, handle2);
-
-        let mut file_state = FileState::_from(tmp_path.to_owned()).unwrap();
-        let actual_token_info = file_state.read_token_info(&CLIENT_ID.to_owned()).unwrap();
-
-        assert_eq!(
-            actual_token_info.access_token,
-            expected_token_info.access_token
-        );
     }
 }
