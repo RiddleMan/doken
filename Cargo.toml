@@ -19,7 +19,7 @@ reqwest = { version = "0.11.27", features = ["json", "rustls-tls"], default-feat
 serde = { version = "1.0.197", features = ["derive"] }
 serde_json = { version = "1.0.114" }
 clap = { version = "4.5.3", features = ["env", "derive"] }
-tokio = { version = "1.36.0", features = ["full"] }
+tokio = { version = "1.37.0", features = ["full"] }
 home = "0.5.9"
 url = "2.5.0"
 async-trait = "0.1.78"
