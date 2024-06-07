@@ -38,6 +38,7 @@ impl FileState {
                 .write(true)
                 .read(true)
                 .create(true)
+                .truncate(false)
                 .open(home_path)?,
         );
 
@@ -57,6 +58,7 @@ impl FileState {
                 .write(true)
                 .read(true)
                 .create(true)
+                .truncate(false)
                 .open(file_path)?,
         );
 
