@@ -6,7 +6,6 @@ use doken::{args::Arguments, auth_browser::browser::Browser, get_token, grant::G
 use lazy_static::lazy_static;
 use serial_test::serial;
 use std::sync::Arc;
-use testcontainers::clients;
 use tokio::sync::{Mutex, OnceCell};
 use tokio::time::sleep;
 
@@ -26,7 +25,7 @@ struct ClientInfo {
 }
 
 struct IdentityProviderInfo {
-    _client: KeycloakClient<'static>,
+    _client: KeycloakClient,
     clients: Vec<ClientInfo>,
     discovery_url: String,
     _token_url: String,
@@ -34,7 +33,6 @@ struct IdentityProviderInfo {
 }
 
 lazy_static! {
-    static ref DOCKER_CLIENT: clients::Cli = clients::Cli::default();
     static ref TOKIO_RUNTIME: tokio::runtime::Runtime = tokio::runtime::Runtime::new().unwrap();
     static ref IDP_INFO: OnceCell<IdentityProviderInfo> = OnceCell::new();
     static ref AUTH_BROWSER: Arc<Mutex<Browser>> = {
@@ -83,7 +81,7 @@ lazy_static! {
 async fn get_idp_info() -> &'static IdentityProviderInfo {
     IDP_INFO
         .get_or_init(|| async {
-            let kc = KeycloakClient::new(&DOCKER_CLIENT).await.unwrap();
+            let kc = KeycloakClient::new().await.unwrap();
             const CLIENT_ID_1: &str = "test-client-id1";
             const REDIRECT_URI_1: &str = "http://localhost:3000/oauth/callback";
             const CLIENT_ID_2: &str = "test-client-id2";

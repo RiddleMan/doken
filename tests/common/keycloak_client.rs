@@ -7,30 +7,27 @@ use keycloak::{
     },
     KeycloakAdmin, KeycloakAdminToken,
 };
-use testcontainers::{
-    clients::{self},
-    Container,
-};
+use testcontainers::{runners::AsyncRunner, ContainerAsync};
 
 use super::keycloak::Keycloak;
 
-pub struct KeycloakClient<'a> {
+pub struct KeycloakClient {
     inner: KeycloakAdmin,
-    _container: Container<'a, Keycloak>,
+    _container: ContainerAsync<Keycloak>,
     url: String,
 }
 
 pub const ACCESS_TOKEN_LIFESPAN: Duration = Duration::from_secs(30);
 
-impl<'a> KeycloakClient<'a> {
-    pub async fn new(docker: &'a clients::Cli) -> Result<KeycloakClient<'a>> {
+impl KeycloakClient {
+    pub async fn new() -> Result<KeycloakClient> {
         let kc_image = Keycloak::default();
         let username = kc_image.username().to_owned();
         let password = kc_image.password().to_owned();
 
-        let kc = docker.run(kc_image);
+        let kc = kc_image.start().await?;
 
-        let url = format!("http://localhost:{}", kc.get_host_port_ipv4(8080));
+        let url = format!("http://localhost:{}", kc.get_host_port_ipv4(8080).await?);
 
         let client = reqwest::Client::new();
         let admin_token = KeycloakAdminToken::acquire(&url, &username, &password, &client).await?;
