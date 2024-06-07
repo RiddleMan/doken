@@ -64,6 +64,6 @@ pr-run-mode = "plan"
 [dev-dependencies]
 tempfile = "3.10.1"
 testcontainers = { version = "0.15.0", features = ["tokio"] }
-keycloak = "21.0.102"
+keycloak = "24.0.0"
 lazy_static = "1.4.0"
 serial_test = "3.0.0"
