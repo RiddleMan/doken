@@ -92,7 +92,7 @@ impl<'a> KeycloakClient<'a> {
     pub async fn get_client_secret(&self, realm_name: &str, client_id: &str) -> Result<String> {
         let credentials = self
             .inner
-            .realm_clients_with_id_client_secret_get(realm_name, client_id)
+            .realm_clients_with_client_uuid_client_secret_get(realm_name, client_id)
             .await?;
 
         Ok(credentials.value.unwrap())
