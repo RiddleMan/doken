@@ -1,18 +1,15 @@
-use std::collections::HashMap;
+use std::{borrow::Cow, collections::HashMap};
 
-use testcontainers::{core::WaitFor, Image, ImageArgs};
+use testcontainers::{
+    core::{ContainerPort, WaitFor},
+    Image,
+};
 
 const NAME: &str = "quay.io/keycloak/keycloak";
 const TAG: &str = "23.0.7";
 
 #[derive(Debug, Default, Clone)]
 pub struct KeycloakArgs;
-
-impl ImageArgs for KeycloakArgs {
-    fn into_iterator(self) -> Box<dyn Iterator<Item = String>> {
-        Box::new(vec!["start-dev".to_owned()].into_iter())
-    }
-}
 
 #[derive(Debug, Clone)]
 pub struct Keycloak {
@@ -52,14 +49,12 @@ impl Default for Keycloak {
 }
 
 impl Image for Keycloak {
-    type Args = KeycloakArgs;
-
-    fn name(&self) -> String {
-        NAME.to_owned()
+    fn name(&self) -> &str {
+        NAME
     }
 
-    fn tag(&self) -> String {
-        self.tag.to_owned()
+    fn tag(&self) -> &str {
+        self.tag.as_str()
     }
 
     fn ready_conditions(&self) -> Vec<WaitFor> {
@@ -68,11 +63,20 @@ impl Image for Keycloak {
         )]
     }
 
-    fn env_vars(&self) -> Box<dyn Iterator<Item = (&String, &String)> + '_> {
-        Box::new(self.env_vars.iter())
+    fn env_vars(
+        &self,
+    ) -> impl IntoIterator<Item = (impl Into<Cow<'_, str>>, impl Into<Cow<'_, str>>)> {
+        self.env_vars.iter()
     }
 
-    fn expose_ports(&self) -> Vec<u16> {
-        vec![8080, 8080]
+    fn expose_ports(&self) -> &[ContainerPort] {
+        &[ContainerPort::Tcp(8080)]
+    }
+
+    fn cmd(&self) -> impl IntoIterator<Item = impl Into<Cow<'_, str>>>
+    where
+        Self: Sized,
+    {
+        vec!["start-dev".to_owned()].into_iter()
     }
 }
