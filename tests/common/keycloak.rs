@@ -1,6 +1,9 @@
 use std::{borrow::Cow, collections::HashMap};
 
-use testcontainers::{core::{ContainerPort, WaitFor}, Image};
+use testcontainers::{
+    core::{ContainerPort, WaitFor},
+    Image,
+};
 
 const NAME: &str = "quay.io/keycloak/keycloak";
 const TAG: &str = "23.0.7";
@@ -60,7 +63,9 @@ impl Image for Keycloak {
         )]
     }
 
-    fn env_vars(&self) -> impl IntoIterator<Item = (impl Into<Cow<'_, str>>, impl Into<Cow<'_, str>>)> {
+    fn env_vars(
+        &self,
+    ) -> impl IntoIterator<Item = (impl Into<Cow<'_, str>>, impl Into<Cow<'_, str>>)> {
         self.env_vars.iter()
     }
 
