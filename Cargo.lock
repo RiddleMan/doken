@@ -1237,9 +1237,9 @@ dependencies = [
 
 [[package]]
 name = "keycloak"
-version = "25.0.0"
+version = "25.0.200"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b55874e9c1f8cb311177a76368dcdf89e83b22f88c0e834da8f7abd19da7dd1b"
+checksum = "4f7c22a160fe693cda470d543a16638bfaa4e9a00c60aa14bec09d5e9c6323d4"
 dependencies = [
  "async-trait",
  "reqwest 0.12.5",
@@ -1273,7 +1273,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4979f22fdb869068da03c9f7528f8297c6fd2606bc3a4affe42e6a823fdb8da4"
 dependencies = [
  "cfg-if",
- "windows-targets 0.48.5",
+ "windows-targets 0.52.5",
 ]
 
 [[package]]
