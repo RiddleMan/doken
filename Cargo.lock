@@ -339,7 +339,7 @@ dependencies = [
  "futures",
  "futures-timer",
  "pin-project-lite",
- "reqwest 0.12.6",
+ "reqwest 0.12.7",
  "serde",
  "serde_json",
  "thiserror",
@@ -615,7 +615,7 @@ dependencies = [
  "log",
  "oauth2",
  "rand",
- "reqwest 0.12.6",
+ "reqwest 0.12.7",
  "rpassword",
  "serde",
  "serde_json",
@@ -1241,7 +1241,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4f7c22a160fe693cda470d543a16638bfaa4e9a00c60aa14bec09d5e9c6323d4"
 dependencies = [
  "async-trait",
- "reqwest 0.12.6",
+ "reqwest 0.12.7",
  "serde",
  "serde_json",
  "serde_with",
@@ -1272,7 +1272,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4979f22fdb869068da03c9f7528f8297c6fd2606bc3a4affe42e6a823fdb8da4"
 dependencies = [
  "cfg-if",
- "windows-targets 0.52.6",
+ "windows-targets 0.48.5",
 ]
 
 [[package]]
@@ -1727,9 +1727,9 @@ dependencies = [
 
 [[package]]
 name = "reqwest"
-version = "0.12.6"
+version = "0.12.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b6f6ddd79dc661ade721873783d159ec87d91d556ce92933e342bae8b87c48c0"
+checksum = "f8f4955649ef5c38cc7f9e8aa41761d48fb9677197daea9984dc54f56aad5e63"
 dependencies = [
  "base64 0.22.1",
  "bytes",
