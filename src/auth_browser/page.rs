@@ -171,8 +171,12 @@ impl Page {
 
                     let body = entries
                         .iter()
-                        .map(|s| s.bytes.as_ref().unwrap().as_ref())
-                        .collect::<Vec<&[u8]>>()
+                        .map(|s| {
+                            BASE64_STANDARD
+                                .decode(s.bytes.as_ref().unwrap().as_ref() as &[u8])
+                                .unwrap()
+                        })
+                        .collect::<Vec<Vec<u8>>>()
                         .join("&".as_bytes());
 
                     log::info!("This is what we get in POST: {:?}", body);
