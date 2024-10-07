@@ -165,11 +165,7 @@ impl Page {
             callback_url,
             move |event| match event.request.method.as_str() {
                 "POST" => {
-                    let entries = event
-                        .request
-                        .post_data_entries
-                        .as_ref()
-                        .unwrap();
+                    let entries = event.request.post_data_entries.as_ref().unwrap();
 
                     log::info!("DUPA: {:?}", entries);
 
