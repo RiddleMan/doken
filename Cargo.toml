@@ -68,6 +68,6 @@ install-path = "CARGO_HOME"
 [dev-dependencies]
 tempfile = "3.10.1"
 testcontainers = { version = "0.23.0" }
-keycloak = "25.0.0"
+keycloak = "26.0.0"
 lazy_static = "1.4.0"
 serial_test = "3.0.0"
