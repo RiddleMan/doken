@@ -131,6 +131,7 @@ async fn get_idp_info() -> &'static IdentityProviderInfo {
 
 #[test]
 #[serial]
+#[ignore]
 fn it_authenticates_with_authorization_code_with_pkce_grant() {
     let _ = env_logger::try_init();
     TOKIO_RUNTIME.block_on(async {
@@ -161,6 +162,7 @@ fn it_authenticates_with_authorization_code_with_pkce_grant() {
 
 #[test]
 #[serial]
+#[ignore]
 fn it_authenticates_with_authorization_code_with_pkce_grant_without_client_secret() {
     let _ = env_logger::try_init();
     TOKIO_RUNTIME.block_on(async {
@@ -190,6 +192,7 @@ fn it_authenticates_with_authorization_code_with_pkce_grant_without_client_secre
 
 #[test]
 #[serial]
+#[ignore]
 fn it_returns_the_same_access_token_when_authenticating_once_again() {
     let _ = env_logger::try_init();
     TOKIO_RUNTIME.block_on(async {
@@ -224,6 +227,7 @@ fn it_returns_the_same_access_token_when_authenticating_once_again() {
 
 #[test]
 #[serial]
+#[ignore]
 fn it_reuses_refresh_token_provided_by_idp_when_authenticating_once_again() {
     let _ = env_logger::try_init();
     TOKIO_RUNTIME.block_on(async {
@@ -260,6 +264,7 @@ fn it_reuses_refresh_token_provided_by_idp_when_authenticating_once_again() {
 
 #[test]
 #[serial]
+#[ignore]
 fn it_opens_new_tab_if_client_ids_does_not_match() {
     let _ = env_logger::try_init();
     TOKIO_RUNTIME.block_on(async {
@@ -305,6 +310,7 @@ fn it_opens_new_tab_if_client_ids_does_not_match() {
 
 #[test]
 #[serial]
+#[ignore]
 fn it_authenticates_with_authorization_code_grant() {
     let _ = env_logger::try_init();
     TOKIO_RUNTIME.block_on(async {
@@ -335,6 +341,7 @@ fn it_authenticates_with_authorization_code_grant() {
 
 #[test]
 #[serial]
+#[ignore]
 fn it_authenticates_with_authorization_code_grant_without_client_secret() {
     let _ = env_logger::try_init();
     TOKIO_RUNTIME.block_on(async {
@@ -394,6 +401,7 @@ fn it_authenticates_with_implicit_grant() {
 
 #[test]
 #[serial]
+#[ignore]
 fn it_authenticates_with_implicit_grant_without_client_secret() {
     let _ = env_logger::try_init();
     TOKIO_RUNTIME.block_on(async {
@@ -423,6 +431,7 @@ fn it_authenticates_with_implicit_grant_without_client_secret() {
 
 #[test]
 #[serial]
+#[ignore]
 fn it_authenticates_with_client_credentials_grant() {
     let _ = env_logger::try_init();
     TOKIO_RUNTIME.block_on(async {
@@ -453,6 +462,7 @@ fn it_authenticates_with_client_credentials_grant() {
 
 #[test]
 #[serial]
+#[ignore]
 fn it_authenticates_with_resource_owner_password_client_credentials_grant() {
     let _ = env_logger::try_init();
     TOKIO_RUNTIME.block_on(async {

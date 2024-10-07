@@ -165,11 +165,15 @@ impl Page {
             callback_url,
             move |event| match event.request.method.as_str() {
                 "POST" => {
-                    let body = event
+                    let entries = event
                         .request
                         .post_data_entries
                         .as_ref()
-                        .unwrap()
+                        .unwrap();
+
+                    log::info!("DUPA: {:?}", entries);
+
+                    let body = entries
                         .iter()
                         .map(|s| s.bytes.as_ref().unwrap().as_ref())
                         .collect::<Vec<&[u8]>>()
