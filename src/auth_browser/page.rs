@@ -179,6 +179,7 @@ impl Page {
                     let form_params =
                         form_urlencoded::parse(body.as_slice())
                             .collect::<Vec<(Cow<str>, Cow<str>)>>();
+                    log::info!("PARAMS: {:?}", form_params);
 
                     let (_, access_token) = form_params
                         .iter()
