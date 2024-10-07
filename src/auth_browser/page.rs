@@ -165,11 +165,11 @@ impl Page {
             callback_url,
             move |event| match event.request.method.as_str() {
                 "POST" => {
-                    let body = event.request.post_data.as_ref().unwrap();
+                    let body = event.request.post_data_entries.as_ref().unwrap().iter().map(|s| s.bytes.as_ref().unwrap().as_ref()).collect::<Vec<&[u8]>>().join("&".as_bytes());
 
                     log::info!("This is what we get in POST: {:?}", body);
                     let form_params =
-                        form_urlencoded::parse(body.as_bytes())
+                        form_urlencoded::parse(body.as_slice())
                             .collect::<Vec<(Cow<str>, Cow<str>)>>();
 
                     let (_, access_token) = form_params

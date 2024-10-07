@@ -38,6 +38,7 @@ impl Browser {
                 tokio::spawn(async move {
                     while let Some(h) = handler.next().await {
                         if h.is_err() {
+                            log::error!("Browser failed: {}", h.err().unwrap());
                             tx.send(()).unwrap();
                             log::error!("Handler created an error");
                             break;
