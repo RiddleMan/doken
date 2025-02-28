@@ -1,10 +1,15 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended", ":automergeAll"],
+  "extends": [
+    "config:recommended",
+    ":automergeAll"
+  ],
   "packageRules": [
     {
-      "matchPackagePatterns": ["ubuntu"],
-      "enabled": false
+      "enabled": false,
+      "matchPackageNames": [
+        "/ubuntu/"
+      ]
     }
   ]
 }
