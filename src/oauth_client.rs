@@ -15,7 +15,7 @@ pub struct OAuthClient<'a> {
     args: &'a Arguments,
     inner: BasicClient,
 }
-impl<'a> OAuthClient<'a> {
+impl OAuthClient<'_> {
     fn get_client(
         args: &Arguments,
         token_url: Option<&str>,

@@ -1,8 +1,8 @@
 use std::{borrow::Cow, collections::HashMap};
 
 use testcontainers::{
-    core::{ContainerPort, WaitFor},
     Image,
+    core::{ContainerPort, WaitFor},
 };
 
 const NAME: &str = "quay.io/keycloak/keycloak";

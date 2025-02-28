@@ -1,11 +1,11 @@
 use crate::token_info::TokenInfo;
-use anyhow::{anyhow, Result};
-use base64::prelude::BASE64_STANDARD;
+use anyhow::{Result, anyhow};
 use base64::Engine;
+use base64::prelude::BASE64_STANDARD;
+use chromiumoxide::Page as CPage;
 use chromiumoxide::cdp::browser_protocol::fetch::{
     ContinueRequestParams, EventRequestPaused, FulfillRequestParams,
 };
-use chromiumoxide::Page as CPage;
 use futures::StreamExt;
 use oauth2::CsrfToken;
 use std::borrow::Cow;

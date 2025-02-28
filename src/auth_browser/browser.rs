@@ -1,11 +1,11 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use chromiumoxide::browser::{Browser as CBrowser, BrowserConfig};
 use chromiumoxide::cdp::browser_protocol::target::CreateTargetParamsBuilder;
 use chromiumoxide::handler::viewport::Viewport;
 use chromiumoxide::{Handler, Page as CPage};
 use futures::StreamExt;
 use std::time::Duration;
-use tokio::sync::{oneshot, OnceCell};
+use tokio::sync::{OnceCell, oneshot};
 
 use super::page::Page;
 

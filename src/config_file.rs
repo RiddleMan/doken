@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use std::{collections::HashMap, env, path::PathBuf};
 use tokio::fs;
 
@@ -107,51 +107,75 @@ impl ConfigFile {
 
             // TODO: Some macro?
             if let Some(grant) = &profile.grant {
-                env::set_var("DOKEN_GRANT", to_variant_name(&grant).unwrap());
+                unsafe {
+                    env::set_var("DOKEN_GRANT", to_variant_name(&grant).unwrap());
+                }
             }
 
             if let Some(discovery_url) = &profile.discovery_url {
-                env::set_var("DOKEN_DISCOVERY_URL", discovery_url);
+                unsafe {
+                    env::set_var("DOKEN_DISCOVERY_URL", discovery_url);
+                }
             }
 
             if let Some(token_url) = &profile.token_url {
-                env::set_var("DOKEN_TOKEN_URL", token_url);
+                unsafe {
+                    env::set_var("DOKEN_TOKEN_URL", token_url);
+                }
             }
 
             if let Some(authorization_url) = &profile.authorization_url {
-                env::set_var("DOKEN_AUTHORIZATION_URL", authorization_url);
+                unsafe {
+                    env::set_var("DOKEN_AUTHORIZATION_URL", authorization_url);
+                }
             }
 
             if let Some(callback_url) = &profile.callback_url {
-                env::set_var("DOKEN_CALLBACK_URL", callback_url);
+                unsafe {
+                    env::set_var("DOKEN_CALLBACK_URL", callback_url);
+                }
             }
 
             if let Some(client_id) = &profile.client_id {
-                env::set_var("DOKEN_CLIENT_ID", client_id);
+                unsafe {
+                    env::set_var("DOKEN_CLIENT_ID", client_id);
+                }
             }
 
             if let Some(client_secret) = &profile.client_secret {
-                env::set_var("DOKEN_CLIENT_SECRET", client_secret);
+                unsafe {
+                    env::set_var("DOKEN_CLIENT_SECRET", client_secret);
+                }
             }
 
             if let Some(username) = &profile.username {
-                env::set_var("DOKEN_USERNAME", username);
+                unsafe {
+                    env::set_var("DOKEN_USERNAME", username);
+                }
             }
 
             if let Some(password) = &profile.password {
-                env::set_var("DOKEN_PASSWORD", password);
+                unsafe {
+                    env::set_var("DOKEN_PASSWORD", password);
+                }
             }
 
             if let Some(scope) = &profile.scope {
-                env::set_var("DOKEN_SCOPE", scope);
+                unsafe {
+                    env::set_var("DOKEN_SCOPE", scope);
+                }
             }
 
             if let Some(audience) = &profile.audience {
-                env::set_var("DOKEN_AUDIENCE", audience);
+                unsafe {
+                    env::set_var("DOKEN_AUDIENCE", audience);
+                }
             }
 
             if let Some(timeout) = &profile.timeout {
-                env::set_var("DOKEN_TIMEOUT", timeout.to_string());
+                unsafe {
+                    env::set_var("DOKEN_TIMEOUT", timeout.to_string());
+                }
             }
         }
 

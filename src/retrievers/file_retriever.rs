@@ -1,7 +1,7 @@
+use crate::FileState;
 use crate::args::Arguments;
 use crate::oauth_client::OAuthClient;
 use crate::token_info::TokenInfo;
-use crate::FileState;
 use anyhow::Result;
 use async_trait::async_trait;
 use std::time::SystemTime;
@@ -21,7 +21,7 @@ pub struct FileRetriever<'a> {
     args: &'a Arguments,
 }
 
-impl<'a> FileRetriever<'a> {
+impl FileRetriever<'_> {
     pub fn new<'b>(
         args: &'b Arguments,
         oauth_client: &'b OAuthClient<'b>,
@@ -60,7 +60,7 @@ impl<'a> FileRetriever<'a> {
 }
 
 #[async_trait(?Send)]
-impl<'a> TokenRetriever for FileRetriever<'a> {
+impl TokenRetriever for FileRetriever<'_> {
     async fn retrieve(&mut self) -> Result<TokenInfo> {
         let token_info = self.file_state.read_token_info(&self.args.client_id);
 

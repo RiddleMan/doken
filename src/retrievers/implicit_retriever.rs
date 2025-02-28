@@ -1,7 +1,7 @@
+use crate::OAuthClient;
 use crate::args::Arguments;
 use crate::auth_browser::page::Page;
 use crate::token_info::TokenInfo;
-use crate::OAuthClient;
 use anyhow::Result;
 use async_trait::async_trait;
 use url::Url;
@@ -14,7 +14,7 @@ pub struct ImplicitRetriever<'a> {
     auth_page: Page,
 }
 
-impl<'a> ImplicitRetriever<'a> {
+impl ImplicitRetriever<'_> {
     pub fn new<'b>(
         args: &'b Arguments,
         oauth_client: &'b OAuthClient<'b>,
@@ -29,7 +29,7 @@ impl<'a> ImplicitRetriever<'a> {
 }
 
 #[async_trait(?Send)]
-impl<'a> TokenRetriever for ImplicitRetriever<'a> {
+impl TokenRetriever for ImplicitRetriever<'_> {
     async fn retrieve(&mut self) -> Result<TokenInfo> {
         let (url, csrf) = self.oauth_client.implicit_url();
 

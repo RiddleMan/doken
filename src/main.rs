@@ -12,7 +12,7 @@ fn enable_debug_via_args() {
     let has_debug_flag = env::args().any(|s| s.eq("--debug") || s.eq("-d"));
 
     if env::var("RUST_LOG").is_err() && has_debug_flag {
-        env::set_var("RUST_LOG", "debug")
+        unsafe { env::set_var("RUST_LOG", "debug") }
     }
 }
 

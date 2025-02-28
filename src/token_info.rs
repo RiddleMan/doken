@@ -1,5 +1,5 @@
-use oauth2::basic::BasicTokenResponse;
 use oauth2::TokenResponse;
+use oauth2::basic::BasicTokenResponse;
 use serde::{Deserialize, Serialize};
 use std::ops::Add;
 use std::time::SystemTime;

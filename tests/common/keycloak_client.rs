@@ -2,12 +2,12 @@ use std::time::Duration;
 
 use anyhow::Result;
 use keycloak::{
+    KeycloakAdmin, KeycloakAdminToken,
     types::{
         ClientRepresentation, CredentialRepresentation, RealmRepresentation, UserRepresentation,
     },
-    KeycloakAdmin, KeycloakAdminToken,
 };
-use testcontainers::{runners::AsyncRunner, ContainerAsync};
+use testcontainers::{ContainerAsync, runners::AsyncRunner};
 
 use super::keycloak::Keycloak;
 

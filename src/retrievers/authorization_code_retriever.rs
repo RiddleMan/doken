@@ -14,7 +14,7 @@ pub struct AuthorizationCodeRetriever<'a> {
     args: &'a Arguments,
 }
 
-impl<'a> AuthorizationCodeRetriever<'a> {
+impl AuthorizationCodeRetriever<'_> {
     pub fn new<'b>(
         args: &'b Arguments,
         oauth_client: &'b OAuthClient<'b>,
@@ -29,7 +29,7 @@ impl<'a> AuthorizationCodeRetriever<'a> {
 }
 
 #[async_trait(?Send)]
-impl<'a> TokenRetriever for AuthorizationCodeRetriever<'a> {
+impl TokenRetriever for AuthorizationCodeRetriever<'_> {
     async fn retrieve(&mut self) -> Result<TokenInfo> {
         let (url, csrf, _nonce) = self.oauth_client.authorize_url(None);
 
