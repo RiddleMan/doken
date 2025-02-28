@@ -15,7 +15,7 @@ pub struct AuthorizationCodeWithPKCERetriever<'a> {
     args: &'a Arguments,
 }
 
-impl<'a> AuthorizationCodeWithPKCERetriever<'a> {
+impl AuthorizationCodeWithPKCERetriever<'_> {
     pub fn new<'b>(
         args: &'b Arguments,
         oauth_client: &'b OAuthClient<'b>,
@@ -30,7 +30,7 @@ impl<'a> AuthorizationCodeWithPKCERetriever<'a> {
 }
 
 #[async_trait(?Send)]
-impl<'a> TokenRetriever for AuthorizationCodeWithPKCERetriever<'a> {
+impl TokenRetriever for AuthorizationCodeWithPKCERetriever<'_> {
     async fn retrieve(&mut self) -> Result<TokenInfo> {
         let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
 
