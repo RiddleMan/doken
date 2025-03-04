@@ -1,26 +1,48 @@
 use crate::args::Arguments;
 use crate::openidc_discovery::get_endpoints_from_discovery_url;
 use anyhow::{Context, Result};
-use oauth2::basic::{BasicClient, BasicTokenResponse};
-use oauth2::reqwest::async_http_client;
-use oauth2::{
-    AuthUrl, AuthorizationCode, AuthorizationRequest, ClientId, ClientSecret, CsrfToken,
-    PkceCodeChallenge, PkceCodeVerifier, RedirectUrl, RefreshToken, ResourceOwnerPassword,
-    ResourceOwnerUsername, Scope, TokenUrl,
+use oauth2::basic::{
+    BasicErrorResponse, BasicRevocationErrorResponse, BasicTokenIntrospectionResponse,
+    BasicTokenResponse,
 };
-use rand::distributions::{Alphanumeric, DistString};
+use oauth2::{
+    AuthUrl, AuthorizationCode, AuthorizationRequest, Client, ClientId, ClientSecret, CsrfToken,
+    EndpointNotSet, EndpointSet, PkceCodeChallenge, PkceCodeVerifier, RedirectUrl, RefreshToken,
+    ResourceOwnerPassword, ResourceOwnerUsername, Scope, StandardRevocableToken, TokenUrl,
+};
+use rand::distr::{Alphanumeric, SampleString};
+use reqwest::redirect::Policy;
 use url::Url;
 
+type BaseClient<
+    HasAuthUrl = EndpointSet,
+    HasDeviceAuthUrl = EndpointNotSet,
+    HasIntrospectionUrl = EndpointNotSet,
+    HasRevocationUrl = EndpointNotSet,
+    HasTokenUrl = EndpointSet,
+> = Client<
+    BasicErrorResponse,
+    BasicTokenResponse,
+    BasicTokenIntrospectionResponse,
+    StandardRevocableToken,
+    BasicRevocationErrorResponse,
+    HasAuthUrl,
+    HasDeviceAuthUrl,
+    HasIntrospectionUrl,
+    HasRevocationUrl,
+    HasTokenUrl,
+>;
 pub struct OAuthClient<'a> {
     args: &'a Arguments,
-    inner: BasicClient,
+    inner: BaseClient,
+    http: reqwest::Client,
 }
 impl OAuthClient<'_> {
     fn get_client(
         args: &Arguments,
         token_url: Option<&str>,
         authorization_url: &str,
-    ) -> Result<BasicClient> {
+    ) -> Result<BaseClient> {
         let token = match token_url {
             Some(url) => Some(TokenUrl::new(url.to_owned()).with_context(|| {
                 format!(
@@ -31,17 +53,20 @@ impl OAuthClient<'_> {
             None => None,
         };
 
-        let mut client = BasicClient::new(
-            ClientId::new(args.client_id.to_owned()),
-            args.client_secret.to_owned().map(ClientSecret::new),
-            AuthUrl::new(authorization_url.to_owned()).with_context(|| {
+        let mut client: BaseClient = BaseClient::new(ClientId::new(args.client_id.to_owned()))
+            .set_auth_uri(AuthUrl::new(authorization_url.to_owned()).with_context(|| {
                 format!(
                     "`--authorization-url` is not a correct absolute URL. Provided value: {}",
                     authorization_url
                 )
-            })?,
-            token,
-        );
+            })?)
+            .set_token_uri(token.unwrap());
+
+        let client_secret = args.client_secret.to_owned().map(ClientSecret::new);
+
+        if client_secret.is_some() {
+            client = client.set_client_secret(client_secret.unwrap());
+        }
 
         if let Some(callback_url) = &args.callback_url {
             client = client.set_redirect_uri(RedirectUrl::new(callback_url.to_owned()).unwrap())
@@ -82,9 +107,14 @@ impl OAuthClient<'_> {
 
         log::debug!("OAuthClient created");
 
+        let http_client = reqwest::Client::builder()
+            .redirect(Policy::none())
+            .build()?;
+
         Ok(OAuthClient {
             args,
             inner: client,
+            http: http_client,
         })
     }
 
@@ -105,7 +135,7 @@ impl OAuthClient<'_> {
         &self,
         pkce_challenge: Option<PkceCodeChallenge>,
     ) -> (Url, CsrfToken, String) {
-        let nonce = Alphanumeric.sample_string(&mut rand::thread_rng(), 16);
+        let nonce = Alphanumeric.sample_string(&mut rand::rng(), 16);
         let mut builder = self.authorization_url_builder();
 
         builder = builder.add_extra_param("nonce", nonce.to_owned());
@@ -140,7 +170,7 @@ impl OAuthClient<'_> {
         }
 
         let token = builder
-            .request_async(async_http_client)
+            .request_async(&self.http)
             .await
             .context("Failed to exchange of client credentials for a token")?;
         log::debug!("Exchange done");
@@ -166,7 +196,7 @@ impl OAuthClient<'_> {
         }
 
         let token = builder
-            .request_async(async_http_client)
+            .request_async(&self.http)
             .await
             .context("Failed to exchange client credentials for a token")?;
         log::debug!("Exchange done");
@@ -188,7 +218,7 @@ impl OAuthClient<'_> {
         }
 
         let token: BasicTokenResponse = builder
-            .request_async(async_http_client)
+            .request_async(&self.http)
             .await
             .context("Failed to exchange code for a token")?;
         log::debug!("Exchange done");
@@ -204,7 +234,7 @@ impl OAuthClient<'_> {
         let response = self
             .inner
             .exchange_refresh_token(&refresh_token)
-            .request_async(async_http_client)
+            .request_async(&self.http)
             .await
             .context("Failed to exchange refresh token to a new token")?;
 
