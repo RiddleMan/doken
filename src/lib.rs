@@ -41,7 +41,7 @@ pub async fn get_token(args: Arguments, auth_browser: MutexGuard<'_, Browser>) -
     }
 
     let mut retriever: Box<dyn TokenRetriever> = match args.grant {
-        Grant::AuthorizationCodeWithPkce { .. } => {
+        Grant::AuthorizationCodeWithPkce => {
             let auth_page = auth_browser.open_page().await?;
             drop(auth_browser);
             Box::new(AuthorizationCodeWithPKCERetriever::new(
@@ -50,7 +50,7 @@ pub async fn get_token(args: Arguments, auth_browser: MutexGuard<'_, Browser>) -
                 auth_page,
             ))
         }
-        Grant::AuthorizationCode { .. } => {
+        Grant::AuthorizationCode => {
             let auth_page = auth_browser.open_page().await?;
             drop(auth_browser);
             Box::new(AuthorizationCodeRetriever::new(

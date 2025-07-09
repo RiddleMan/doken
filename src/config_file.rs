@@ -90,7 +90,7 @@ impl ConfigFile {
                 Config { profile }
             }),
             Err(e) => {
-                log::warn!("{}", e);
+                log::warn!("{e}");
                 Config { profile }
             }
         }
@@ -103,7 +103,7 @@ impl ConfigFile {
             let profile = config
                 .profile
                 .get(&profile)
-                .context(format!("The given profile `{:?}` doesn't exist", profile))?;
+                .context(format!("The given profile `{profile:?}` doesn't exist"))?;
 
             // TODO: Some macro?
             if let Some(grant) = &profile.grant {

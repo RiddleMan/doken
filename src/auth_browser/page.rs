@@ -60,7 +60,7 @@ impl Page {
                 if request_url.origin() == callback_url.origin()
                     && request_url.path() == callback_url.path()
                 {
-                    log::debug!("Received request to `--callback-url` {}", callback_url);
+                    log::debug!("Received request to `--callback-url` {callback_url}");
 
                     let response = f(event.clone());
 
@@ -95,7 +95,7 @@ impl Page {
             }
         });
 
-        log::debug!("Opening authorization page {}", authorization_url);
+        log::debug!("Opening authorization page {authorization_url}");
         self.page.goto(authorization_url.as_str()).await?;
 
         let response = tokio::select! {
@@ -131,7 +131,7 @@ impl Page {
                 (Some((_, state)), Some((_, code))) => {
                     if state == *csrf_token.secret() {
                         let code = code.to_string();
-                        log::debug!("Given code: {}", code);
+                        log::debug!("Given code: {code}");
 
                         Some(code)
                     } else {

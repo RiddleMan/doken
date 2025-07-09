@@ -145,13 +145,13 @@ impl Args {
         let mut cmd: Command = Arguments::command();
 
         match args.grant {
-            Grant::AuthorizationCodeWithPkce { .. } => {
+            Grant::AuthorizationCodeWithPkce => {
                 Self::assert_urls_for_authorization_grants(args);
             }
-            Grant::AuthorizationCode { .. } => {
+            Grant::AuthorizationCode => {
                 Self::assert_urls_for_authorization_grants(args);
             }
-            Grant::ResourceOwnerPasswordClientCredentials { .. } => {
+            Grant::ResourceOwnerPasswordClientCredentials => {
                 if args.token_url.is_none() && args.discovery_url.is_none() {
                     cmd.error(
                         ErrorKind::MissingRequiredArgument,
@@ -184,7 +184,7 @@ impl Args {
                         .exit();
                 }
             }
-            Grant::ClientCredentials { .. } => {
+            Grant::ClientCredentials => {
                 if args.token_url.is_none() && args.discovery_url.is_none() {
                     cmd.error(
                         ErrorKind::MissingRequiredArgument,
@@ -201,7 +201,7 @@ impl Args {
                         .exit();
                 }
             }
-            Grant::Implicit { .. } => {
+            Grant::Implicit => {
                 if args.token_url.is_some() {
                     cmd.error(
                         ErrorKind::ArgumentConflict,
@@ -291,7 +291,7 @@ impl Args {
         args = Self::parse_password(args);
 
         log::debug!("Argument parsing done");
-        log::debug!("Running with arguments: {:#?}", args);
+        log::debug!("Running with arguments: {args:#?}");
 
         args
     }
