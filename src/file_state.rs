@@ -97,21 +97,14 @@ impl FileState {
     }
 
     pub fn read_token_info(&mut self, client_id: &String) -> Option<TokenInfo> {
-        log::debug!(
-            "Reading token info for client_id: {} from the state",
-            client_id
-        );
+        log::debug!("Reading token info for client_id: {client_id} from the state",);
         let state = self.read();
 
         state.data.get(client_id).cloned()
     }
 
     pub fn upsert_token_info(&mut self, client_id: String, token_info: TokenInfo) -> Result<()> {
-        log::debug!(
-            "Saving token info: {:#?} for client_id: {} to the state",
-            token_info,
-            client_id
-        );
+        log::debug!("Saving token info: {token_info:#?} for client_id: {client_id} to the state",);
         let mut state = self.read();
 
         state.data.insert(client_id, token_info);
@@ -122,10 +115,7 @@ impl FileState {
     }
 
     pub fn clear_token_info(&mut self, client_id: String) -> Result<()> {
-        log::debug!(
-            "Clearing token info for client_id: {} in the state",
-            client_id
-        );
+        log::debug!("Clearing token info for client_id: {client_id} in the state",);
         let mut state = self.read();
 
         state.data.remove(&client_id);
