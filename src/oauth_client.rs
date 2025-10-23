@@ -60,8 +60,8 @@ impl OAuthClient<'_> {
 
         let client_secret = args.client_secret.to_owned().map(ClientSecret::new);
 
-        if client_secret.is_some() {
-            client = client.set_client_secret(client_secret.unwrap());
+        if let Some(secret) = client_secret {
+            client = client.set_client_secret(secret);
         }
 
         if let Some(callback_url) = &args.callback_url {
@@ -71,7 +71,7 @@ impl OAuthClient<'_> {
         Ok(client)
     }
 
-    pub async fn new(args: &Arguments) -> Result<OAuthClient> {
+    pub async fn new(args: &Arguments) -> Result<OAuthClient<'_>> {
         log::debug!("Creating OAuthClient...");
 
         let (token_url, authorization_url) = if let Some(discovery_url) =
@@ -110,7 +110,7 @@ impl OAuthClient<'_> {
         })
     }
 
-    fn authorization_url_builder(&self) -> AuthorizationRequest {
+    fn authorization_url_builder(&self) -> AuthorizationRequest<'_> {
         let mut builder = self
             .inner
             .authorize_url(CsrfToken::new_random)
