@@ -1,6 +1,6 @@
 [package]
 name = "doken"
-version = "0.8.0"
+version = "0.9.0"
 description = "Tool for getting tokens from OAuth 2.0/OpenID Connect providers"
 edition = "2024"
 repository = "https://github.com/RiddleMan/doken"
