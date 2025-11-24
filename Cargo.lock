@@ -350,7 +350,7 @@ checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
 [[package]]
 name = "chromiumoxide"
 version = "0.7.0"
-source = "git+https://github.com/mattsse/chromiumoxide?rev=6f2392f78ae851e2acf33df8e9764cc299d837db#6f2392f78ae851e2acf33df8e9764cc299d837db"
+source = "git+https://github.com/mattsse/chromiumoxide?rev=6329f5bc82e24211e80d5e067c92ed3409352203#6329f5bc82e24211e80d5e067c92ed3409352203"
 dependencies = [
  "async-tungstenite",
  "base64 0.22.1",
@@ -370,13 +370,13 @@ dependencies = [
  "tracing",
  "url",
  "which",
- "winreg",
+ "windows-registry",
 ]
 
 [[package]]
 name = "chromiumoxide_cdp"
 version = "0.7.0"
-source = "git+https://github.com/mattsse/chromiumoxide?rev=6f2392f78ae851e2acf33df8e9764cc299d837db#6f2392f78ae851e2acf33df8e9764cc299d837db"
+source = "git+https://github.com/mattsse/chromiumoxide?rev=6329f5bc82e24211e80d5e067c92ed3409352203#6329f5bc82e24211e80d5e067c92ed3409352203"
 dependencies = [
  "chromiumoxide_pdl",
  "chromiumoxide_types",
@@ -387,7 +387,7 @@ dependencies = [
 [[package]]
 name = "chromiumoxide_pdl"
 version = "0.7.0"
-source = "git+https://github.com/mattsse/chromiumoxide?rev=6f2392f78ae851e2acf33df8e9764cc299d837db#6f2392f78ae851e2acf33df8e9764cc299d837db"
+source = "git+https://github.com/mattsse/chromiumoxide?rev=6329f5bc82e24211e80d5e067c92ed3409352203#6329f5bc82e24211e80d5e067c92ed3409352203"
 dependencies = [
  "chromiumoxide_types",
  "either",
@@ -403,7 +403,7 @@ dependencies = [
 [[package]]
 name = "chromiumoxide_types"
 version = "0.7.0"
-source = "git+https://github.com/mattsse/chromiumoxide?rev=6f2392f78ae851e2acf33df8e9764cc299d837db#6f2392f78ae851e2acf33df8e9764cc299d837db"
+source = "git+https://github.com/mattsse/chromiumoxide?rev=6329f5bc82e24211e80d5e067c92ed3409352203#6329f5bc82e24211e80d5e067c92ed3409352203"
 dependencies = [
  "serde",
  "serde_json",
@@ -3026,6 +3026,35 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f0805222e57f7521d6a62e36fa9163bc891acd422f971defe97d64e70d0a4fe5"
 
 [[package]]
+name = "windows-registry"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6c44a98275e31bfd112bb06ba96c8ab13c03383a3753fdddd715406a1824c7e0"
+dependencies = [
+ "windows-link 0.1.0",
+ "windows-result",
+ "windows-strings",
+]
+
+[[package]]
+name = "windows-result"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "06374efe858fab7e4f881500e6e86ec8bc28f9462c47e5a9941a0142ad86b189"
+dependencies = [
+ "windows-link 0.1.0",
+]
+
+[[package]]
+name = "windows-strings"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "87fa48cc5d406560701792be122a10132491cff9d0aeb23583cc2dcafc847319"
+dependencies = [
+ "windows-link 0.1.0",
+]
+
+[[package]]
 name = "windows-sys"
 version = "0.48.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3187,16 +3216,6 @@ name = "winnow"
 version = "0.7.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "21a0236b59786fed61e2a80582dd500fe61f18b5dca67a4a067d0bc9039339cf"
-
-[[package]]
-name = "winreg"
-version = "0.52.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a277a57398d4bfa075df44f501a17cfdf8542d224f0d36095a2adc7aee4ef0a5"
-dependencies = [
- "cfg-if",
- "windows-sys 0.48.0",
-]
 
 [[package]]
 name = "winsafe"
