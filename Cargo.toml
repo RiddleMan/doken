@@ -31,7 +31,7 @@ form_urlencoded = "1.2.1"
 rpassword = "7.3.1"
 anyhow = "1.0.81"
 thiserror = "2.0.0"
-chromiumoxide = { git = "https://github.com/mattsse/chromiumoxide", features = ["tokio-runtime"], default-features = false, rev = "00e8e0318ee5df5bc0dca36e40b4afc08f5188ac"}
+chromiumoxide = { git = "https://github.com/mattsse/chromiumoxide", features = ["tokio-runtime"], default-features = false, rev = "c671c3beaa3a1a3c689409728f2afc72a0adc7b3"}
 futures = "0.3.30"
 base64 = "0.22.0"
 toml = "0.9.0"
