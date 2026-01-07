@@ -351,7 +351,7 @@ checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
 [[package]]
 name = "chromiumoxide"
 version = "0.8.0"
-source = "git+https://github.com/mattsse/chromiumoxide?rev=c671c3beaa3a1a3c689409728f2afc72a0adc7b3#c671c3beaa3a1a3c689409728f2afc72a0adc7b3"
+source = "git+https://github.com/mattsse/chromiumoxide?rev=c519a5c6c0e2045834ced6d3b65961d634b0ae1e#c519a5c6c0e2045834ced6d3b65961d634b0ae1e"
 dependencies = [
  "async-tungstenite",
  "base64 0.22.1",
@@ -377,7 +377,7 @@ dependencies = [
 [[package]]
 name = "chromiumoxide_cdp"
 version = "0.8.0"
-source = "git+https://github.com/mattsse/chromiumoxide?rev=c671c3beaa3a1a3c689409728f2afc72a0adc7b3#c671c3beaa3a1a3c689409728f2afc72a0adc7b3"
+source = "git+https://github.com/mattsse/chromiumoxide?rev=c519a5c6c0e2045834ced6d3b65961d634b0ae1e#c519a5c6c0e2045834ced6d3b65961d634b0ae1e"
 dependencies = [
  "chromiumoxide_pdl",
  "chromiumoxide_types",
@@ -388,7 +388,7 @@ dependencies = [
 [[package]]
 name = "chromiumoxide_pdl"
 version = "0.8.0"
-source = "git+https://github.com/mattsse/chromiumoxide?rev=c671c3beaa3a1a3c689409728f2afc72a0adc7b3#c671c3beaa3a1a3c689409728f2afc72a0adc7b3"
+source = "git+https://github.com/mattsse/chromiumoxide?rev=c519a5c6c0e2045834ced6d3b65961d634b0ae1e#c519a5c6c0e2045834ced6d3b65961d634b0ae1e"
 dependencies = [
  "chromiumoxide_types",
  "either",
@@ -404,7 +404,7 @@ dependencies = [
 [[package]]
 name = "chromiumoxide_types"
 version = "0.8.0"
-source = "git+https://github.com/mattsse/chromiumoxide?rev=c671c3beaa3a1a3c689409728f2afc72a0adc7b3#c671c3beaa3a1a3c689409728f2afc72a0adc7b3"
+source = "git+https://github.com/mattsse/chromiumoxide?rev=c519a5c6c0e2045834ced6d3b65961d634b0ae1e#c519a5c6c0e2045834ced6d3b65961d634b0ae1e"
 dependencies = [
  "serde",
  "serde_json",
