@@ -700,7 +700,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "33d852cb9b869c2a9b3df2f71a3074817f01e1844f839a144f5fcef059a4eb5d"
 dependencies = [
  "libc",
- "windows-sys 0.52.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -1830,7 +1830,7 @@ dependencies = [
  "once_cell",
  "socket2 0.5.10",
  "tracing",
- "windows-sys 0.52.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -2051,7 +2051,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys 0.4.15",
- "windows-sys 0.52.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -2494,9 +2494,9 @@ dependencies = [
 
 [[package]]
 name = "testcontainers"
-version = "0.27.0"
+version = "0.27.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c3fdcea723c64cc08dbc533b3761e345a15bf1222cbe6cb611de09b43f17a168"
+checksum = "c1c0624faaa317c56d6d19136580be889677259caf5c897941c6f446b4655068"
 dependencies = [
  "astral-tokio-tar",
  "async-trait",
