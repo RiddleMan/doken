@@ -29,7 +29,7 @@ impl KeycloakClient {
 
         let url = format!("http://localhost:{}", kc.get_host_port_ipv4(8080).await?);
 
-        let client = reqwest::Client::new();
+        let client = keycloak::prelude::reqwest::Client::new();
         let admin_token = KeycloakAdminToken::acquire(&url, &username, &password, &client).await?;
 
         Ok(Self {
