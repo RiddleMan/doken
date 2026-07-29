@@ -83,7 +83,7 @@ impl ConfigFile {
             Ok(text) => toml::from_str::<Config>(&text).unwrap_or_else(|e| {
                 log::warn!(
                     "Cannot parse config file {}. Error: {:?}",
-                    &self.file_path.to_string_lossy(),
+                    self.file_path.to_string_lossy(),
                     anyhow!(e)
                 );
 
