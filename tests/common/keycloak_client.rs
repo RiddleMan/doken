@@ -98,21 +98,21 @@ impl KeycloakClient {
     pub fn discovery_url(&self, realm_name: &str) -> String {
         format!(
             "{}/realms/{}/.well-known/openid-configuration",
-            &self.url, realm_name
+            self.url, realm_name
         )
     }
 
     pub fn token_url(&self, realm_name: &str) -> String {
         format!(
             "{}/realms/{}/protocol/openid-connect/token",
-            &self.url, realm_name
+            self.url, realm_name
         )
     }
 
     pub fn authorize_url(&self, realm_name: &str) -> String {
         format!(
             "{}/realms/{}/protocol/openid-connect/auth",
-            &self.url, realm_name
+            self.url, realm_name
         )
     }
 }
